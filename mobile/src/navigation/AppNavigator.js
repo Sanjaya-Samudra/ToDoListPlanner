@@ -9,14 +9,14 @@ import AuthStack from "./AuthStack";
 import MainTabs from "./MainTabs";
 
 const AppNavigator = () => {
-  const { token, loading } = useAuth();
+  const { token, loading, logout } = useAuth();
   const { theme, isDark } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(true);
 
   if (showSplash) return <SplashScreen onFinish={() => setShowSplash(false)} />;
 
-  if (showOnboarding) return <OnboardingScreen onFinish={() => setShowOnboarding(false)} />;
+  if (showOnboarding) return <OnboardingScreen onFinish={async () => { try { await logout(); } catch {} setShowOnboarding(false); }} />;
 
   if (loading) {
     return (
