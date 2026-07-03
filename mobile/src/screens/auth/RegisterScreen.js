@@ -11,7 +11,7 @@ const RegisterScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const colors = theme.colors;
-  const { demoLogin } = useAuth();
+  const { register } = useAuth();
   const { showToast } = useToast();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -51,10 +51,10 @@ const RegisterScreen = ({ navigation }) => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await demoLogin();
+      await register(name, email, password);
       showToast("Welcome to TaskFlow!", "success");
-    } catch {
-      showToast("Registration failed", "error");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Registration failed", "error");
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Animated, StyleSheet, Alert, SafeAreaView } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Animated, StyleSheet, Alert, SafeAreaView, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
@@ -11,19 +11,23 @@ import GradientText from "../../components/GradientText";
 import { REMINDER_FREQUENCIES } from "../../constants/config";
 import { useToast } from "../../context/ToastContext";
 import { mediumImpact } from "../../utils/haptics";
+import { useTasks } from "../../hooks/useTasks";
 
 const AnimatedStat = ({ value, label, color, textColor }) => {
   const anim = useRef(new Animated.Value(0)).current;
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     anim.setValue(0);
-    Animated.timing(anim, { toValue: value, duration: 800, useNativeDriver: false }).start();
-    const listener = anim.addListener(({ value: v }) => setDisplay(typeof v === "string" ? v : Math.round(v)));
+    Animated.timing(anim, { toValue: Number(value) || 0, duration: 800, useNativeDriver: false }).start();
+    const listener = anim.addListener(({ value: v }) => setDisplay(Math.round(v)));
     return () => anim.removeListener(listener);
   }, [value]);
   return (
     <View style={{ alignItems: "center", gap: 2 }}>
-      <Text style={{ fontSize: 22, fontWeight: "800", color }}>{display}{typeof value === "string" && value.includes("%") ? "%" : ""}</Text>
+      <Text style={{ fontSize: 22, fontWeight: "800", color }}>
+        {display}
+        {label === "Rate" ? "%" : ""}
+      </Text>
       <Text style={{ fontSize: 11, fontWeight: "500", color: textColor }}>{label}</Text>
     </View>
   );
@@ -34,6 +38,10 @@ const ProfileScreen = ({ navigation }) => {
   const c = theme.colors;
   const { user, logout, updateProfile } = useAuth();
   const { showToast } = useToast();
+
+  const { getProgress } = useTasks();
+  const [stats, setStats] = useState({ total: 0, completed: 0, percentage: 0, streak: 0 });
+
   const [name, setName] = useState(user?.name || "");
   const [reminderFreq, setReminderFreq] = useState(user?.reminderFrequency || 5);
   const [saving, setSaving] = useState(false);
@@ -42,6 +50,11 @@ const ProfileScreen = ({ navigation }) => {
   const rotateRing = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    loadStats();
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadStats();
+    });
+
     Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }).start();
     Animated.loop(Animated.sequence([
       Animated.timing(pulseRing, { toValue: 1, duration: 2500, useNativeDriver: true }),
@@ -50,7 +63,25 @@ const ProfileScreen = ({ navigation }) => {
     Animated.loop(Animated.sequence([
       Animated.timing(rotateRing, { toValue: 1, duration: 8000, useNativeDriver: true }),
     ])).start();
-  }, []);
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadStats = async () => {
+    try {
+      const data = await getProgress();
+      if (data) {
+        setStats({
+          total: data.total || 0,
+          completed: data.completed || 0,
+          percentage: data.percentage || 0,
+          streak: data.streak || 0,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load profile stats:", err);
+    }
+  };
 
   const handleUpdate = async () => {
     if (!name.trim()) { showToast("Name is required", "error"); return; }
@@ -63,10 +94,18 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Logout", style: "destructive", onPress: () => { mediumImpact(); logout(); } },
-    ]);
+    if (Platform.OS === "web") {
+      const confirmLogout = window.confirm("Are you sure you want to logout?");
+      if (confirmLogout) {
+        mediumImpact();
+        logout();
+      }
+    } else {
+      Alert.alert("Logout", "Are you sure?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Logout", style: "destructive", onPress: () => { mediumImpact(); logout(); } },
+      ]);
+    }
   };
 
   const ringS = pulseRing.interpolate({ inputRange: [0, 1], outputRange: [1, 1.45] });
@@ -100,13 +139,13 @@ const ProfileScreen = ({ navigation }) => {
             <GradientText style={styles.name}>{user?.name || "User"}</GradientText>
             <Text style={[styles.email, { color: c.textTertiary }]}>{user?.email}</Text>
             <View style={[styles.statsRow, { backgroundColor: c.glass, borderColor: c.glassBorder }]}>
-              <AnimatedStat value={24} label="Tasks" color={c.primary} textColor={c.textSecondary} />
+              <AnimatedStat value={stats.total} label="Tasks" color={c.primary} textColor={c.textSecondary} />
               <View style={[styles.statDivider, { backgroundColor: c.borderLight }]} />
-              <AnimatedStat value={18} label="Done" color={c.success} textColor={c.textSecondary} />
+              <AnimatedStat value={stats.completed} label="Done" color={c.success} textColor={c.textSecondary} />
               <View style={[styles.statDivider, { backgroundColor: c.borderLight }]} />
-              <AnimatedStat value={"85%"} label="Rate" color={c.warning} textColor={c.textSecondary} />
+              <AnimatedStat value={stats.percentage} label="Rate" color={c.warning} textColor={c.textSecondary} />
               <View style={[styles.statDivider, { backgroundColor: c.borderLight }]} />
-              <AnimatedStat value={7} label="Streak" color="#FF6584" textColor={c.textSecondary} />
+              <AnimatedStat value={stats.streak} label="Streak" color="#FF6584" textColor={c.textSecondary} />
             </View>
           </View>
 

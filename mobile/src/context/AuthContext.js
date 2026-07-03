@@ -11,7 +11,22 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     loadStoredAuth();
-  }, []);
+
+    // Automatically log out user if any API request returns a 401 Unauthorized error
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          await logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, [logout]);
 
   const loadStoredAuth = async () => {
     try {

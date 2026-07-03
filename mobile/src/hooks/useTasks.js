@@ -83,8 +83,13 @@ export const useTasks = () => {
   const toggleTask = toggleStatus;
 
   const getProgress = useCallback(async () => {
-    const { data } = await api.get("/tasks/progress");
-    return data;
+    try {
+      const { data } = await api.get("/tasks/progress");
+      return data;
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load progress");
+      return { completed: 0, total: 0, percentage: 0 };
+    }
   }, []);
 
   const getCategoryCounts = useCallback(() => {

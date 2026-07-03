@@ -1,4 +1,9 @@
-const DEV_API_URL = "http://10.0.2.2:5000/api";
+// For physical Android device testing over Wi-Fi: use your local machine's IP (detected: 192.168.8.197)
+const DEV_API_URL = "http://192.168.8.197:5000/api";
+
+// For Android Emulator testing: use loopback address
+// const DEV_API_URL = "http://10.0.2.2:5000/api";
+
 const PROD_API_URL = "https://your-production-url.com/api";
 
 export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;

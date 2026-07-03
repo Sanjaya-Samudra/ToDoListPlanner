@@ -92,19 +92,24 @@ const DashboardScreen = ({ navigation }) => {
 
   const loadData = async () => {
     setLoading(true);
-    const data = await fetchTasks();
-    const p = await getProgress();
-    setProgress(p);
-    if (data) {
-      setRecentTasks(data.slice(0, 3));
-      const now = new Date();
-      const deadline = new Date(now.getTime() + 7 * 86400000);
-      const upcomingTasks = data
-        .filter((t) => t.dueDate && t.status === "pending" && new Date(t.dueDate) <= deadline)
-        .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-      setUpcoming(upcomingTasks);
+    try {
+      const data = await fetchTasks();
+      const p = await getProgress();
+      if (p) setProgress(p);
+      if (data) {
+        setRecentTasks(data.slice(0, 3));
+        const now = new Date();
+        const deadline = new Date(now.getTime() + 7 * 86400000);
+        const upcomingTasks = data
+          .filter((t) => t.dueDate && t.status === "pending" && new Date(t.dueDate) <= deadline)
+          .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+        setUpcoming(upcomingTasks);
+      }
+    } catch (err) {
+      console.error("Error loading dashboard data:", err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const hour = new Date().getHours();

@@ -11,7 +11,7 @@ const LoginScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const colors = theme.colors;
-  const { demoLogin } = useAuth();
+  const { login, demoLogin } = useAuth();
   const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,10 +48,10 @@ const LoginScreen = ({ navigation }) => {
     if (!validate()) return;
     setLoading(true);
     try {
-      await demoLogin();
+      await login(email, password);
       showToast("Welcome to TaskFlow!", "success");
-    } catch {
-      showToast("Login failed", "error");
+    } catch (err) {
+      showToast(err.response?.data?.message || "Login failed", "error");
     } finally {
       setLoading(false);
     }

@@ -49,6 +49,11 @@ const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const isDemoToken = error.config?.headers?.["Authorization"] === "Bearer demo-token-taskflow-2024";
+    if (error.response?.status === 401 && isDemoToken && isDemoable(error.config)) {
+      const mock = mockResponse(error.config);
+      if (mock) return Promise.resolve(mock);
+    }
     if (error.response?.status === 401) {
       console.warn("[API] Unauthorized");
     }
