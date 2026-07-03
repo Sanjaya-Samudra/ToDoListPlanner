@@ -204,7 +204,7 @@ MONGODB_URI=mongodb://localhost:27017/todo-planner
 JWT_SECRET=your_random_jwt_secret_here
 JWT_EXPIRES_IN=7d
 GROQ_API_KEY=gsk_your_actual_groq_api_key
-GROQ_MODEL=mixtral-8x7b-32768
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 ### 3. Start Backend Server
