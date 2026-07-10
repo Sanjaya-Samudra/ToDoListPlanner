@@ -26,7 +26,7 @@ const SORTS = [
 const TaskListScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const c = theme.colors;
-  const { tasks, fetchTasks, toggleTask, deleteTask } = useTasks();
+  const { tasks, fetchTasks, toggleTask, deleteTask, createTask } = useTasks();
   const { showToast } = useToast();
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("createdAt");
