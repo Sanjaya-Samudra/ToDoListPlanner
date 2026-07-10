@@ -7,8 +7,13 @@ import TaskSuggestionCard from "../../components/TaskSuggestionCard";
 import GlassCard from "../../components/GlassCard";
 import SuggestionChip from "../../components/SuggestionChip";
 import AnimatedButton from "../../components/AnimatedButton";
+import BottomSheet from "../../components/BottomSheet";
+import CategoryPicker from "../../components/CategoryPicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { useTasks } from "../../hooks/useTasks";
+import { PRIORITIES } from "../../constants/config";
 import { mediumImpact } from "../../utils/haptics";
 
 const QUICK_ACTIONS = [
@@ -38,7 +43,7 @@ const parseTasks = (text) => {
 
 const stripTaskMarkers = (text) => text.replace(/\[TASK:[^\]]*\]/g, "").replace(/\n{2,}/g, "\n").trim();
 
-const AnimatedMessage = ({ item, index, onTaskAdded }) => {
+const AnimatedMessage = ({ item, index, onPressAdd, addedTaskIds }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(anim, { toValue: 1, damping: 20, stiffness: 150, delay: index === 0 ? 0 : 50, useNativeDriver: true }).start();
@@ -52,7 +57,12 @@ const AnimatedMessage = ({ item, index, onTaskAdded }) => {
       {!item.isUser && item.suggestedTasks?.length > 0 && (
         <View style={{ paddingHorizontal: 16, marginTop: -4 }}>
           {item.suggestedTasks.map((task, ti) => (
-            <TaskSuggestionCard key={ti} {...task} onAdded={onTaskAdded} />
+            <TaskSuggestionCard
+              key={task.id || ti}
+              {...task}
+              onPressAdd={() => onPressAdd(task)}
+              isAdded={addedTaskIds.includes(task.id || `${task.title}-${task.description}`)}
+            />
           ))}
         </View>
       )}
@@ -64,6 +74,7 @@ const AIChatScreen = () => {
   const { theme } = useTheme();
   const c = theme.colors;
   const { showToast } = useToast();
+  const { createTask } = useTasks();
   const [messages, setMessages] = useState([
     { id: "0", text: "Hi! I'm your AI assistant. I can help organize your tasks, suggest to-dos, and more. Try asking me to generate tasks for you!", isUser: false, timestamp: new Date(), suggestedTasks: [], displayText: "Hi! I'm your AI assistant. I can help organize your tasks, suggest to-dos, and more. Try asking me to generate tasks for you!" },
   ]);
@@ -77,6 +88,18 @@ const AIChatScreen = () => {
   const typingDots = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const recognitionRef = useRef(null);
+
+  // Suggested Task Editing Flow
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const [addedTaskIds, setAddedTaskIds] = useState([]);
+  const [formTitle, setFormTitle] = useState("");
+  const [formDescription, setFormDescription] = useState("");
+  const [formCategory, setFormCategory] = useState("other");
+  const [formPriority, setFormPriority] = useState("medium");
+  const [formDueDate, setFormDueDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [savingTask, setSavingTask] = useState(false);
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -96,6 +119,52 @@ const AIChatScreen = () => {
     }
   }, [isRecording]);
 
+  const handlePressAdd = (task) => {
+    setSelectedTask(task);
+    setFormTitle(task.title || "");
+    setFormDescription(task.description || "");
+    setFormCategory(task.category || "other");
+    setFormPriority(task.priority || "medium");
+    setFormDueDate(task.dueDate ? new Date(task.dueDate) : new Date());
+    setIsSheetVisible(true);
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setFormDueDate(selectedDate);
+    }
+  };
+
+  const handleConfirmAdd = async () => {
+    if (!formTitle.trim()) {
+      showToast("Title is required", "error");
+      return;
+    }
+    setSavingTask(true);
+    try {
+      await createTask({
+        title: formTitle.trim(),
+        description: formDescription.trim(),
+        category: formCategory,
+        priority: formPriority,
+        dueDate: formDueDate ? formDueDate.toISOString() : null,
+      });
+
+      if (selectedTask) {
+        const taskId = selectedTask.id || `${selectedTask.title}-${selectedTask.description}`;
+        setAddedTaskIds((prev) => [...prev, taskId]);
+      }
+
+      showToast("Task added!", "success");
+      setIsSheetVisible(false);
+    } catch {
+      showToast("Failed to add task", "error");
+    } finally {
+      setSavingTask(false);
+    }
+  };
+
   const sendMessage = async (text) => {
     const msg = text || input;
     if (!msg.trim() || loading) return;
@@ -111,13 +180,17 @@ const AIChatScreen = () => {
       const inlineTasks = parseTasks(reply);
       const allTasks = apiTasks.length > 0 ? apiTasks : inlineTasks;
       const cleanText = inlineTasks.length > 0 ? stripTaskMarkers(reply) : reply;
+      const tasksWithIds = allTasks.map((t, idx) => ({
+        ...t,
+        id: t.id || `${Date.now()}-${idx}`
+      }));
       const aiMsg = {
         id: (Date.now() + 1).toString(),
         text: reply,
         displayText: cleanText,
         isUser: false,
         timestamp: new Date(),
-        suggestedTasks: allTasks,
+        suggestedTasks: tasksWithIds,
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch {
@@ -221,7 +294,7 @@ const AIChatScreen = () => {
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => <AnimatedMessage item={item} index={index} onTaskAdded={() => {}} />}
+        renderItem={({ item, index }) => <AnimatedMessage item={item} index={index} onPressAdd={handlePressAdd} addedTaskIds={addedTaskIds} />}
         ListFooterComponent={loading ? renderTypingIndicator : null}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         contentContainerStyle={styles.messageList}
@@ -247,6 +320,132 @@ const AIChatScreen = () => {
           <Text style={styles.sendIcon}>➤</Text>
         </TouchableOpacity>
       </Animated.View>
+
+      <BottomSheet
+        visible={isSheetVisible}
+        onClose={() => setIsSheetVisible(false)}
+        title="Confirm Suggested Task"
+        snapPoint={Platform.OS === 'web' ? 620 : 540}
+      >
+        <View style={styles.formGroup}>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Title</Text>
+          <TextInput
+            style={[styles.formInput, { color: c.text, backgroundColor: c.inputBg, borderColor: c.border }]}
+            value={formTitle}
+            onChangeText={setFormTitle}
+            placeholder="Task Title"
+            placeholderTextColor={c.textTertiary}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Description</Text>
+          <TextInput
+            style={[styles.formInput, styles.formInputMultiline, { color: c.text, backgroundColor: c.inputBg, borderColor: c.border }]}
+            value={formDescription}
+            onChangeText={setFormDescription}
+            placeholder="Description (optional)"
+            placeholderTextColor={c.textTertiary}
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Category</Text>
+          <CategoryPicker
+            selected={formCategory}
+            onSelect={(cat) => setFormCategory(cat || "other")}
+            showAll={false}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Priority</Text>
+          <View style={styles.priorityRow}>
+            {PRIORITIES.map((pri) => {
+              const active = formPriority === pri.value;
+              return (
+                <TouchableOpacity
+                  key={pri.value}
+                  style={[
+                    styles.priorityBtn,
+                    {
+                      backgroundColor: active ? pri.color : c.inputBg,
+                      borderColor: active ? pri.color : c.border,
+                    },
+                  ]}
+                  onPress={() => setFormPriority(pri.value)}
+                >
+                  <Text style={styles.priorityIcon}>{pri.icon}</Text>
+                  <Text style={[styles.priorityLabel, { color: active ? "#fff" : c.text }]}>
+                    {pri.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Due Date</Text>
+          {Platform.OS === "web" ? (
+            <input
+              type="date"
+              value={formDueDate ? formDueDate.toISOString().split("T")[0] : ""}
+              onChange={(e) => setFormDueDate(e.target.value ? new Date(e.target.value) : new Date())}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: c.border,
+                backgroundColor: c.inputBg,
+                color: c.text,
+                fontSize: 14,
+                fontFamily: "inherit",
+                outline: "none",
+                width: "100%",
+              }}
+            />
+          ) : (
+            <View>
+              <TouchableOpacity
+                style={[styles.dateBtn, { backgroundColor: c.inputBg, borderColor: c.border }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
+                  📅 {formDueDate ? formDueDate.toLocaleDateString() : "Select Due Date"}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={formDueDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={handleDateChange}
+                />
+              )}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.cancelBtn, { borderColor: c.border }]}
+            onPress={() => setIsSheetVisible(false)}
+            disabled={savingTask}
+          >
+            <Text style={[styles.cancelBtnText, { color: c.textSecondary }]}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.confirmBtn, { backgroundColor: c.primary }]}
+            onPress={handleConfirmAdd}
+            disabled={savingTask}
+          >
+            <Text style={styles.confirmBtnText}>{savingTask ? "Adding..." : "Confirm & Add"}</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 };
@@ -274,6 +473,20 @@ const styles = StyleSheet.create({
   micIcon: { fontSize: 18 },
   sendBtn: { marginLeft: 8, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   sendIcon: { color: "#fff", fontSize: 18 },
+  formGroup: { marginBottom: 14 },
+  formLabel: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
+  formInput: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontWeight: "500" },
+  formInputMultiline: { height: 60, textAlignVertical: "top" },
+  priorityRow: { flexDirection: "row", gap: 8 },
+  priorityBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 12, borderWidth: 1 },
+  priorityIcon: { fontSize: 14 },
+  priorityLabel: { fontSize: 13, fontWeight: "600" },
+  dateBtn: { padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "center" },
+  actionButtons: { flexDirection: "row", gap: 10, marginTop: 16 },
+  cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  cancelBtnText: { fontSize: 14, fontWeight: "600" },
+  confirmBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  confirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });
 
 export default AIChatScreen;

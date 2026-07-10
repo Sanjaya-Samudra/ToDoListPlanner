@@ -7,34 +7,19 @@ import { useToast } from "../context/ToastContext";
 import { mediumImpact, successNotification } from "../utils/haptics";
 import { getPriorityColor } from "../constants/priorities";
 
-const TaskSuggestionCard = ({ title, description, category, priority, onAdded }) => {
+const TaskSuggestionCard = ({ title, description, category, priority, onPressAdd, isAdded }) => {
   const { theme } = useTheme();
   const c = theme.colors;
-  const { createTask } = useTasks();
-  const { showToast } = useToast();
   const scale = useRef(new Animated.Value(0.95)).current;
-  const [adding, setAdding] = React.useState(false);
-  const [added, setAdded] = React.useState(false);
 
   React.useEffect(() => {
     Animated.spring(scale, { toValue: 1, damping: 12, stiffness: 100, useNativeDriver: true }).start();
   }, []);
 
-  const handleAdd = async () => {
-    if (adding || added) return;
-    setAdding(true);
+  const handlePress = () => {
+    if (isAdded) return;
     mediumImpact();
-    try {
-      await createTask({ title, description: description || "", category: category || "other", priority: priority || "medium" });
-      setAdded(true);
-      successNotification();
-      showToast("Task added!", "success");
-      onAdded?.();
-    } catch {
-      showToast("Failed to add task", "error");
-    } finally {
-      setAdding(false);
-    }
+    onPressAdd?.({ title, description, category, priority });
   };
 
   const priColor = getPriorityColor(priority);
@@ -51,12 +36,12 @@ const TaskSuggestionCard = ({ title, description, category, priority, onAdded })
             {priority ? <View style={[styles.tag, { backgroundColor: c.warning + "12" }]}><Text style={[styles.tagText, { color: c.warning }]}>{priority}</Text></View> : null}
           </View>
           <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: added ? c.success : c.primary }]}
-            onPress={handleAdd}
-            disabled={adding || added}
+            style={[styles.addBtn, { backgroundColor: isAdded ? c.success : c.primary }]}
+            onPress={handlePress}
+            disabled={isAdded}
             activeOpacity={0.8}
           >
-            <Text style={styles.addBtnText}>{added ? "✓ Added" : adding ? "Adding..." : "+ Add to Tasks"}</Text>
+            <Text style={styles.addBtnText}>{isAdded ? "✓ Added" : "+ Add to Tasks"}</Text>
           </TouchableOpacity>
         </View>
       </View>
