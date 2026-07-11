@@ -5,6 +5,7 @@ const {
 	loginUser,
 	getProfile,
 	updateProfile,
+	changePassword,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/auth");
 const validate = require("../middleware/validate");
@@ -34,6 +35,12 @@ router.post("/register", validate({ body: registerSchema }), registerUser);
 router.post("/login", validate({ body: loginSchema }), loginUser);
 router.get("/profile", protect, getProfile);
 router.put("/profile", protect, validate({ body: profileSchema }), updateProfile);
+
+const changePasswordSchema = Joi.object({
+	currentPassword: Joi.string().required(),
+	newPassword: Joi.string().min(6).required(),
+});
+router.put("/change-password", protect, validate({ body: changePasswordSchema }), changePassword);
 
 module.exports = router;
 

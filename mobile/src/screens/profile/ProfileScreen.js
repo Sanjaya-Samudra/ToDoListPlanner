@@ -12,6 +12,7 @@ import { REMINDER_FREQUENCIES } from "../../constants/config";
 import { useToast } from "../../context/ToastContext";
 import { mediumImpact } from "../../utils/haptics";
 import { useTasks } from "../../hooks/useTasks";
+import api from "../../services/api";
 
 const AnimatedStat = ({ value, label, color, textColor }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -45,6 +46,10 @@ const ProfileScreen = ({ navigation }) => {
   const [name, setName] = useState(user?.name || "");
   const [reminderFreq, setReminderFreq] = useState(user?.reminderFrequency || 5);
   const [saving, setSaving] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseRing = useRef(new Animated.Value(0)).current;
   const rotateRing = useRef(new Animated.Value(0)).current;
@@ -91,6 +96,27 @@ const ProfileScreen = ({ navigation }) => {
       showToast("Profile updated!", "success");
       mediumImpact();
     } catch { showToast("Failed to update", "error"); } finally { setSaving(false); }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!currentPassword.trim()) { showToast("Current password is required", "error"); return; }
+    if (!newPassword.trim()) { showToast("New password is required", "error"); return; }
+    if (newPassword.length < 6) { showToast("New password must be at least 6 characters", "error"); return; }
+    if (newPassword !== confirmPassword) { showToast("Passwords do not match", "error"); return; }
+
+    setUpdatingPassword(true);
+    try {
+      await api.put("/auth/change-password", { currentPassword, newPassword });
+      showToast("Password updated successfully!", "success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      mediumImpact();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to update password", "error");
+    } finally {
+      setUpdatingPassword(false);
+    }
   };
 
   const handleLogout = () => {
@@ -160,6 +186,14 @@ const ProfileScreen = ({ navigation }) => {
               ))}
             </View>
             <AnimatedButton title={saving ? "Saving..." : "Save Changes"} onPress={handleUpdate} loading={saving} fullWidth />
+          </PremiumGlassCard>
+
+          <PremiumGlassCard accentColor={c.primary} glowColor={c.primary} style={{ marginHorizontal: 16, marginBottom: 16 }}>
+            <Text style={[styles.cardTitle, { color: c.text }]}>🔒 Change Password</Text>
+            <AnimatedInput label="Current Password" value={currentPassword} onChangeText={setCurrentPassword} icon="🔑" secureTextEntry />
+            <AnimatedInput label="New Password" value={newPassword} onChangeText={setNewPassword} icon="🔒" secureTextEntry />
+            <AnimatedInput label="Confirm New Password" value={confirmPassword} onChangeText={setConfirmPassword} icon="🛡️" secureTextEntry />
+            <AnimatedButton title={updatingPassword ? "Updating..." : "Update Password"} onPress={handlePasswordUpdate} loading={updatingPassword} fullWidth />
           </PremiumGlassCard>
 
           <PremiumGlassCard accentColor={c.accent} glowColor={c.accent} style={{ marginHorizontal: 16, marginBottom: 16 }}>

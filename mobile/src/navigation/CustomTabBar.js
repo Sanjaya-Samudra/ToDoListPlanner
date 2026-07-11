@@ -42,8 +42,16 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
           const onPress = () => {
             const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+            if (!event.defaultPrevented) {
+              if (route.name === "Profile") {
+                navigation.navigate("Profile", { screen: "ProfileMain" });
+              } else if (route.name === "TasksTab") {
+                navigation.navigate("TasksTab", { screen: "TaskList" });
+              } else if (route.name === "StatsTab") {
+                navigation.navigate("StatsTab", { screen: "StatsMain" });
+              } else {
+                navigation.navigate(route.name);
+              }
               mediumImpact();
             }
           };
