@@ -43,7 +43,13 @@ const TaskListScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => {
+    fetchTasks();
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchTasks();
+    });
+    return unsubscribe;
+  }, [navigation, fetchTasks]);
 
   useEffect(() => {
     Animated.spring(sortAnim, { toValue: showSort ? 1 : 0, damping: 14, stiffness: 120, useNativeDriver: true }).start();

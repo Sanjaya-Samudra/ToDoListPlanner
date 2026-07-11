@@ -16,6 +16,12 @@ import { useTasks } from "../../hooks/useTasks";
 import { PRIORITIES } from "../../constants/config";
 import { mediumImpact } from "../../utils/haptics";
 
+const toLocalISOString = (date) => {
+  if (!date) return "";
+  const tzoffset = date.getTimezoneOffset() * 60000;
+  return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
+};
+
 const QUICK_ACTIONS = [
   { icon: "📝", label: "Generate Tasks", action: "generate" },
   { icon: "💡", label: "Productivity Tips", action: "tips" },
@@ -99,6 +105,7 @@ const AIChatScreen = () => {
   const [formPriority, setFormPriority] = useState("medium");
   const [formDueDate, setFormDueDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [savingTask, setSavingTask] = useState(false);
 
   useEffect(() => {
@@ -388,11 +395,11 @@ const AIChatScreen = () => {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Due Date</Text>
+          <Text style={[styles.formLabel, { color: c.textSecondary }]}>Due Date & Time</Text>
           {Platform.OS === "web" ? (
             <input
-              type="date"
-              value={formDueDate ? formDueDate.toISOString().split("T")[0] : ""}
+              type="datetime-local"
+              value={toLocalISOString(formDueDate)}
               onChange={(e) => setFormDueDate(e.target.value ? new Date(e.target.value) : new Date())}
               style={{
                 padding: 12,
@@ -409,20 +416,52 @@ const AIChatScreen = () => {
             />
           ) : (
             <View>
-              <TouchableOpacity
-                style={[styles.dateBtn, { backgroundColor: c.inputBg, borderColor: c.border }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
-                  📅 {formDueDate ? formDueDate.toLocaleDateString() : "Select Due Date"}
-                </Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.dateBtn, { flex: 1, backgroundColor: c.inputBg, borderColor: c.border }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
+                    📅 {formDueDate ? formDueDate.toLocaleDateString() : "Select Date"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.dateBtn, { flex: 1, backgroundColor: c.inputBg, borderColor: c.border }]}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={{ color: c.text, fontSize: 14, fontWeight: "500" }}>
+                    ⏰ {formDueDate ? formDueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Select Time"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               {showDatePicker && (
                 <DateTimePicker
                   value={formDueDate || new Date()}
                   mode="date"
                   display="default"
-                  onChange={handleDateChange}
+                  onChange={(event, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) {
+                      const newDate = new Date(formDueDate || new Date());
+                      newDate.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                      setFormDueDate(newDate);
+                    }
+                  }}
+                />
+              )}
+              {showTimePicker && (
+                <DateTimePicker
+                  value={formDueDate || new Date()}
+                  mode="time"
+                  display="default"
+                  onChange={(event, selectedTime) => {
+                    setShowTimePicker(false);
+                    if (selectedTime) {
+                      const newDate = new Date(formDueDate || new Date());
+                      newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+                      setFormDueDate(newDate);
+                    }
+                  }}
                 />
               )}
             </View>

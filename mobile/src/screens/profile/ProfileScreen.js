@@ -115,8 +115,6 @@ const ProfileScreen = ({ navigation }) => {
   const menuItems = [
     { icon: "🔔", label: "Notifications", action: "notifications" },
     { icon: "🌙", label: "Dark Mode", toggle: true },
-    { icon: "📊", label: "Weekly Report", value: "View" },
-    { icon: "🔒", label: "Privacy", value: "Settings" },
   ];
 
   return (
