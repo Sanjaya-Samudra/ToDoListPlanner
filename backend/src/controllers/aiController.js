@@ -62,19 +62,51 @@ const simpleTaskSuggestions = (text) => {
 		.filter(Boolean)
 		.slice(0, 4);
 
+	const defaultDueDate = new Date();
+	defaultDueDate.setHours(defaultDueDate.getHours() + 2); // Suggest in 2 hours
+
 	if (seed.length === 0) {
 		return [
-			{ title: "Plan your next priority", description: "Pick the most urgent task and start with a 15 minute focus block.", category: "work", priority: "high" },
-			{ title: "Break work into steps", description: "Split large work into smaller actions so it feels easier to start.", category: "personal", priority: "medium" },
+			{ 
+				title: "Plan your next priority", 
+				description: "Pick the most urgent task and start with a 15 minute focus block.", 
+				category: "work", 
+				priority: "high",
+				dueDate: defaultDueDate.toISOString()
+			},
+			{ 
+				title: "Break work into steps", 
+				description: "Split large work into smaller actions so it feels easier to start.", 
+				category: "personal", 
+				priority: "medium",
+				dueDate: new Date(defaultDueDate.getTime() + 24 * 60 * 60 * 1000).toISOString() // tomorrow
+			},
 		];
 	}
 
-	return seed.map((item, index) => ({
-		title: item.replace(/^i need to\s*/i, "").replace(/^help me\s*/i, "").slice(0, 80),
-		description: `Generated from: ${item}`,
-		category: index % 2 === 0 ? "work" : "study",
-		priority: index === 0 ? "high" : "medium",
-	}));
+	return seed.map((item, index) => {
+		const taskDueDate = new Date();
+		taskDueDate.setDate(taskDueDate.getDate() + index);
+		taskDueDate.setHours(12, 0, 0, 0); // Noon
+
+		let suggestedPriority = "medium";
+		const lowerItem = item.toLowerCase();
+		if (lowerItem.includes("urgent") || lowerItem.includes("asap") || lowerItem.includes("exam") || lowerItem.includes("deadline") || lowerItem.includes("important")) {
+			suggestedPriority = "high";
+		} else if (lowerItem.includes("low") || lowerItem.includes("later") || lowerItem.includes("whenever")) {
+			suggestedPriority = "low";
+		} else if (index === 0) {
+			suggestedPriority = "high";
+		}
+
+		return {
+			title: item.replace(/^i need to\s*/i, "").replace(/^help me\s*/i, "").slice(0, 80),
+			description: `Generated from: ${item}`,
+			category: index % 2 === 0 ? "work" : "study",
+			priority: suggestedPriority,
+			dueDate: taskDueDate.toISOString(),
+		};
+	});
 };
 
 const getTaskSnapshot = async (userId) => {
@@ -104,7 +136,7 @@ const chat = async (req, res) => {
 				{
 					role: "system",
 					content:
-						"You are a helpful task planning assistant. Return ONLY valid JSON with keys reply (string) and tasks (array). Each task must include title, description, category, and priority. If no tasks are needed, return an empty array.",
+						"You are a helpful task planning assistant. Return ONLY valid JSON with keys reply (string) and tasks (array). Each task must include title (string), description (string), category (one of: study, work, personal, health, other), priority (one of: high, medium, low), and dueDate (ISO 8601 string or null). Analyze the user's message to suggest the most appropriate priority level and date/time (dueDate). If the user does not specify a date or time, suggest a realistic one based on context. If no tasks are needed, return an empty array.",
 				},
 				{
 					role: "user",
@@ -138,7 +170,7 @@ const generateTasks = async (req, res) => {
 				{
 					role: "system",
 					content:
-						"Generate task suggestions from the user's text. Return ONLY JSON with key tasks as an array. Each task must include title, description, category, and priority.",
+						"Generate task suggestions from the user's text. Return ONLY JSON with key tasks as an array. Each task must include title (string), description (string), category (one of: study, work, personal, health, other), priority (one of: high, medium, low), and dueDate (ISO 8601 string or null). Analyze the text to suggest the most appropriate priority level and date/time (dueDate). If the user does not specify a date or time, suggest a realistic one based on context.",
 				},
 				{ role: "user", content: text },
 			],

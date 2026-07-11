@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { View, Text, ScrollView, Animated, StyleSheet, SafeAreaView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
@@ -69,7 +69,7 @@ const StreakIndicator = ({ days }) => {
   );
 };
 
-const StatsScreen = () => {
+const StatsScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const c = theme.colors;
   const { getProgress, tasks, fetchTasks } = useTasks();
@@ -78,7 +78,13 @@ const StatsScreen = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const unsubscribe = navigation?.addListener("focus", () => {
+      loadData();
+    });
+    return unsubscribe;
+  }, [navigation]);
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),

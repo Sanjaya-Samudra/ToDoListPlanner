@@ -9,6 +9,13 @@ import GlassCard from "../../components/GlassCard";
 import { CATEGORIES, PRIORITIES } from "../../constants/config";
 import { useToast } from "../../context/ToastContext";
 import { mediumImpact, successNotification } from "../../utils/haptics";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
+const toLocalISOString = (date) => {
+  if (!date) return "";
+  const tzoffset = date.getTimezoneOffset() * 60000;
+  return (new Date(date.getTime() - tzoffset)).toISOString().slice(0, 16);
+};
 
 const CreateEditTaskScreen = ({ route, navigation }) => {
   const { theme } = useTheme();
@@ -22,6 +29,9 @@ const CreateEditTaskScreen = ({ route, navigation }) => {
   const [description, setDescription] = useState(existingTask?.description || "");
   const [category, setCategory] = useState(existingTask?.category || "other");
   const [priority, setPriority] = useState(existingTask?.priority || "medium");
+  const [dueDate, setDueDate] = useState(existingTask?.dueDate ? new Date(existingTask.dueDate) : null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -39,7 +49,13 @@ const CreateEditTaskScreen = ({ route, navigation }) => {
     if (!validate()) return;
     setSaving(true);
     try {
-      const data = { title: title.trim(), description: description.trim(), category, priority };
+      const data = {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        priority,
+        dueDate: dueDate ? dueDate.toISOString() : null,
+      };
       if (isEdit) { await updateTask(existingTask._id, data); showToast("Task updated!", "success"); }
       else { await createTask(data); showToast("Task created!", "success"); successNotification(); }
       mediumImpact();
@@ -68,6 +84,88 @@ const CreateEditTaskScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               ))}
             </View>
+          </GlassCard>
+
+          <GlassCard style={{ marginBottom: 16 }}>
+            <Text style={[styles.sectionTitle, { color: c.text }]}>Due Date & Time</Text>
+            {Platform.OS === "web" ? (
+              <input
+                type="datetime-local"
+                value={toLocalISOString(dueDate)}
+                onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value) : null)}
+                style={{
+                  padding: 12,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  backgroundColor: c.inputBg,
+                  color: c.text,
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  outline: "none",
+                  width: "100%",
+                }}
+              />
+            ) : (
+              <View>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.optionBtn, { flex: 1, backgroundColor: c.inputBg, borderColor: c.border }]}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>
+                      📅 {dueDate ? dueDate.toLocaleDateString() : "Select Date"}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.optionBtn, { flex: 1, backgroundColor: c.inputBg, borderColor: c.border }]}
+                    onPress={() => setShowTimePicker(true)}
+                  >
+                    <Text style={{ color: c.text, fontSize: 13, fontWeight: "600" }}>
+                      ⏰ {dueDate ? dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Select Time"}
+                    </Text>
+                  </TouchableOpacity>
+                  {dueDate && (
+                    <TouchableOpacity
+                      style={[styles.optionBtn, { backgroundColor: c.error + "15", borderColor: c.error + "40" }]}
+                      onPress={() => setDueDate(null)}
+                    >
+                      <Text style={{ color: c.error, fontSize: 13, fontWeight: "600" }}>✕ Clear</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={dueDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        const newDate = new Date(dueDate || new Date());
+                        newDate.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+                        setDueDate(newDate);
+                      }
+                    }}
+                  />
+                )}
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={dueDate || new Date()}
+                    mode="time"
+                    display="default"
+                    onChange={(event, selectedTime) => {
+                      setShowTimePicker(false);
+                      if (selectedTime) {
+                        const newDate = new Date(dueDate || new Date());
+                        newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+                        setDueDate(newDate);
+                      }
+                    }}
+                  />
+                )}
+              </View>
+            )}
           </GlassCard>
 
           <GlassCard style={{ marginBottom: 24 }}>

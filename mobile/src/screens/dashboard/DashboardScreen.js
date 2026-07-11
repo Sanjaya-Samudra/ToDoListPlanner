@@ -81,7 +81,13 @@ const DashboardScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadData();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
     Animated.parallel([
@@ -201,7 +207,9 @@ const DashboardScreen = ({ navigation }) => {
               </TouchableOpacity>
             ))}
             {recentTasks.length === 0 && (
-              <Text style={[styles.emptyText, { color: c.textTertiary }]}>No tasks yet. Tap + to create one!</Text>
+              <TouchableOpacity onPress={() => navigation.navigate("CreateEditTask")}>
+                <Text style={[styles.emptyText, { color: c.textTertiary, textDecorationLine: "underline" }]}>No tasks yet. Tap + to create one!</Text>
+              </TouchableOpacity>
             )}
           </PremiumGlassCard>
 
