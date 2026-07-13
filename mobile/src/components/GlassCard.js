@@ -1,6 +1,5 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
 
 const GlassCard = ({ children, style, accentColor, accentPosition = "top", compact = false }) => {
@@ -10,10 +9,10 @@ const GlassCard = ({ children, style, accentColor, accentPosition = "top", compa
 
   return (
     <View style={[styles.wrapper, style]}>
-      {accentPosition === "top" && (
-        <View style={[styles.accentBar, { backgroundColor: accent }]} />
-      )}
       <View style={[styles.card, { backgroundColor: c.glass, borderColor: c.glassBorder, shadowColor: theme.shadow.md.shadowColor, shadowOpacity: theme.shadow.md.shadowOpacity, shadowOffset: theme.shadow.md.shadowOffset, shadowRadius: theme.shadow.md.shadowRadius, elevation: theme.shadow.md.elevation }]}>
+        {accentPosition === "top" && (
+          <View style={[styles.accentBar, { backgroundColor: accent }]} />
+        )}
         {accentPosition === "left" && (
           <View style={[styles.accentLeft, { backgroundColor: accent }]} />
         )}
@@ -27,11 +26,11 @@ const GlassCard = ({ children, style, accentColor, accentPosition = "top", compa
 
 const styles = StyleSheet.create({
   wrapper: { position: "relative" },
-  accentBar: { height: 3, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  accentBar: { height: 3 },
   accentLeft: { position: "absolute", left: 0, top: 12, bottom: 12, width: 3, borderTopRightRadius: 2, borderBottomRightRadius: 2, zIndex: 1 },
-  card: { borderRadius: 20, borderWidth: 1, backdropFilter: "blur(12px)", overflow: "hidden" },
+  card: { borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   inner: { padding: 20 },
-  compactInner: { padding: 14 },
+  compactInner: { padding: 18 },
 });
 
 export default GlassCard;

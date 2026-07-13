@@ -35,7 +35,7 @@ const NotificationItem = ({ item, index, onAcknowledge }) => {
 const NotificationScreen = ({ navigation }) => {
   const { theme } = useTheme();
   const c = theme.colors;
-  const { notifications, unreadCount, acknowledge, acknowledgeAll, refresh } = useNotifications();
+  const { notifications, unreadCount, acknowledge, acknowledgeAll, refresh, loading } = useNotifications();
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -67,7 +67,7 @@ const NotificationScreen = ({ navigation }) => {
         ListEmptyComponent={<EmptyState variant="notifications" />}
         showsVerticalScrollIndicator={false}
         onRefresh={refresh}
-        refreshing={false}
+        refreshing={loading || false}
       />
     </SafeAreaView>
   );

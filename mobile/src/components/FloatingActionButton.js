@@ -1,11 +1,10 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { TouchableOpacity, Text, Animated, StyleSheet } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { mediumImpact } from "../utils/haptics";
 
 const FloatingActionButton = ({ onPress, icon = "+", color }) => {
   const { theme } = useTheme();
-  const colors = theme.colors;
   const scale = useRef(new Animated.Value(1)).current;
   const rotate = useRef(new Animated.Value(0)).current;
 
@@ -31,7 +30,7 @@ const FloatingActionButton = ({ onPress, icon = "+", color }) => {
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={handlePress}
-        style={[styles.fab, { backgroundColor: color || colors.primary, shadowColor: color || colors.primary }]}
+        style={[styles.fab, { backgroundColor: color || theme.colors.primary, shadowColor: color || theme.colors.primary }]}
       >
         <Animated.Text style={[styles.icon, { transform: [{ rotate: rotation }] }]}>{icon}</Animated.Text>
       </TouchableOpacity>

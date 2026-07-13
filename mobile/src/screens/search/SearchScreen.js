@@ -9,7 +9,7 @@ import PremiumSearchBar from "../../components/PremiumSearchBar";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { mediumImpact } from "../../utils/haptics";
 
-const recentSearches = ["AI assignment", "study for exam", "buy groceries", "team meeting"];
+const recentSearches = ["design project", "study for exam", "buy groceries", "team meeting"];
 
 const SearchScreen = ({ navigation }) => {
   const { theme } = useTheme();

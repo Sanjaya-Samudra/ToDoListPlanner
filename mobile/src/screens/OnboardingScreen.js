@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { View, Text, Animated, StyleSheet, Dimensions, TouchableOpacity } from "react-native";
+import { View, Text, Animated, StyleSheet, Dimensions, TouchableOpacity, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 const { width, height } = Dimensions.get("window");
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: "800", textAlign: "center", marginBottom: 16, letterSpacing: -0.5 },
   desc: { fontSize: 16, color: "rgba(255,255,255,0.5)", textAlign: "center", lineHeight: 26, paddingHorizontal: 10, maxWidth: 320 },
   accentBar: { position: "absolute", bottom: 0, width: 60, height: 4, borderRadius: 2, opacity: 0.4 },
-  footer: { position: "absolute", bottom: 50, left: 0, right: 0, paddingHorizontal: 24 },
+  footer: { position: "absolute", bottom: Platform.OS === "ios" ? 70 : 50, left: 0, right: 0, paddingHorizontal: 24 },
   dotsRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 32, gap: 4 },
   dotTouch: { padding: 4 },
   dot: { height: 8, borderRadius: 4 },

@@ -22,7 +22,7 @@ const PremiumGlassCard = ({ children, style, glowColor, accentColor, compact = f
     <View style={[styles.wrapper, style]}>
       <Animated.View style={[styles.glow, { backgroundColor: glowColor || accent, opacity: glowOpacity }]} />
       <View style={[styles.card, { backgroundColor: c.glass, borderColor: c.glassBorder, shadowColor: theme.shadow.md.shadowColor, shadowOpacity: theme.shadow.md.shadowOpacity + 0.05, shadowOffset: { width: 0, height: 4 }, shadowRadius: 16, elevation: theme.shadow.md.elevation + 1 }]}>
-        <LinearGradient colors={[accent + "08", "transparent"]} style={styles.innerGlow} />
+        <LinearGradient colors={[accent + "08", "transparent"]} style={styles.innerGlow} pointerEvents="none" />
         <View style={[styles.accentBar, { backgroundColor: accent }]} />
         <View style={[styles.inner, compact && styles.compactInner]}>
           {children}
@@ -34,12 +34,12 @@ const PremiumGlassCard = ({ children, style, glowColor, accentColor, compact = f
 
 const styles = StyleSheet.create({
   wrapper: { position: "relative" },
-  glow: { position: "absolute", top: 0, left: 10, right: 10, bottom: 0, borderRadius: 24, filter: "blur(20px)" },
-  card: { borderRadius: 20, borderWidth: 1, overflow: "hidden", backdropFilter: "blur(12px)" },
-  innerGlow: { position: "absolute", top: 0, left: 0, right: 0, height: "100%", pointerEvents: "none" },
-  accentBar: { height: 3, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  glow: { position: "absolute", top: 12, left: 10, right: 10, bottom: 6, borderRadius: 24 },
+  card: { borderRadius: 20, borderWidth: 1, overflow: "hidden" },
+  innerGlow: { position: "absolute", top: 0, left: 0, right: 0, height: 40 },
+  accentBar: { height: 3 },
   inner: { padding: 20 },
-  compactInner: { padding: 14 },
+  compactInner: { padding: 18 },
 });
 
 export default PremiumGlassCard;

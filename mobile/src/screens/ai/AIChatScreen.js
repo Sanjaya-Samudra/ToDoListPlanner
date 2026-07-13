@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
 import ChatBubble from "../../components/ChatBubble";
 import TaskSuggestionCard from "../../components/TaskSuggestionCard";
+import UpdateCard from "../../components/UpdateCard";
 import GlassCard from "../../components/GlassCard";
 import SuggestionChip from "../../components/SuggestionChip";
 import AnimatedButton from "../../components/AnimatedButton";
@@ -49,7 +50,7 @@ const parseTasks = (text) => {
 
 const stripTaskMarkers = (text) => text.replace(/\[TASK:[^\]]*\]/g, "").replace(/\n{2,}/g, "\n").trim();
 
-const AnimatedMessage = ({ item, index, onPressAdd, addedTaskIds }) => {
+const AnimatedMessage = ({ item, index, onPressAdd, addedTaskIds, onApplyUpdate, appliedUpdateIds }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(anim, { toValue: 1, damping: 20, stiffness: 150, delay: index === 0 ? 0 : 50, useNativeDriver: true }).start();
@@ -72,6 +73,18 @@ const AnimatedMessage = ({ item, index, onPressAdd, addedTaskIds }) => {
           ))}
         </View>
       )}
+      {!item.isUser && item.suggestedUpdates?.length > 0 && (
+        <View style={{ paddingHorizontal: 16, marginTop: -4 }}>
+          {item.suggestedUpdates.map((update, ui) => (
+            <UpdateCard
+              key={update.taskId || ui}
+              summary={update.summary}
+              onApply={() => onApplyUpdate?.(update)}
+              isApplied={appliedUpdateIds.includes(update.taskId)}
+            />
+          ))}
+        </View>
+      )}
     </Animated.View>
   );
 };
@@ -80,16 +93,15 @@ const AIChatScreen = () => {
   const { theme } = useTheme();
   const c = theme.colors;
   const { showToast } = useToast();
-  const { createTask } = useTasks();
-  const [messages, setMessages] = useState([
-    { id: "0", text: "Hi! I'm your AI assistant. I can help organize your tasks, suggest to-dos, and more. Try asking me to generate tasks for you!", isUser: false, timestamp: new Date(), suggestedTasks: [], displayText: "Hi! I'm your AI assistant. I can help organize your tasks, suggest to-dos, and more. Try asking me to generate tasks for you!" },
-  ]);
+  const { createTask, updateTask, fetchTasks, tasks } = useTasks();
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const flatListRef = useRef(null);
   const inputRef = useRef(null);
+  const isNearBottom = useRef(true);
   const inputFocusAnim = useRef(new Animated.Value(0)).current;
   const typingDots = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
@@ -99,6 +111,9 @@ const AIChatScreen = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
   const [addedTaskIds, setAddedTaskIds] = useState([]);
+  const [appliedUpdateIds, setAppliedUpdateIds] = useState([]);
+  const [pendingUpdate, setPendingUpdate] = useState(null);
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formCategory, setFormCategory] = useState("other");
@@ -113,6 +128,7 @@ const AIChatScreen = () => {
       Animated.timing(typingDots, { toValue: 0.3, duration: 800, useNativeDriver: true }),
       Animated.timing(typingDots, { toValue: 1, duration: 800, useNativeDriver: true }),
     ])).start();
+    fetchTasks();
   }, []);
 
   useEffect(() => {
@@ -134,6 +150,27 @@ const AIChatScreen = () => {
     setFormPriority(task.priority || "medium");
     setFormDueDate(task.dueDate ? new Date(task.dueDate) : new Date());
     setIsSheetVisible(true);
+  };
+
+  const handleApplyUpdate = (update) => {
+    setPendingUpdate(update);
+    setShowUpdateConfirm(true);
+  };
+
+  const handleConfirmUpdate = async () => {
+    if (!pendingUpdate) return;
+    setSavingTask(true);
+    try {
+      await updateTask(pendingUpdate.taskId, pendingUpdate.changes);
+      setAppliedUpdateIds((prev) => [...prev, pendingUpdate.taskId]);
+      showToast("Task updated!", "success");
+      setShowUpdateConfirm(false);
+      setPendingUpdate(null);
+    } catch {
+      showToast("Failed to update task", "error");
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   const handleDateChange = (event, selectedDate) => {
@@ -176,7 +213,7 @@ const AIChatScreen = () => {
     const msg = text || input;
     if (!msg.trim() || loading) return;
     mediumImpact();
-    const userMsg = { id: Date.now().toString(), text: msg.trim(), isUser: true, timestamp: new Date(), suggestedTasks: [] };
+    const userMsg = { id: Date.now().toString(), text: msg.trim(), isUser: true, timestamp: new Date(), suggestedTasks: [], suggestedUpdates: [] };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
@@ -187,6 +224,7 @@ const AIChatScreen = () => {
       const inlineTasks = parseTasks(reply);
       const allTasks = apiTasks.length > 0 ? apiTasks : inlineTasks;
       const cleanText = inlineTasks.length > 0 ? stripTaskMarkers(reply) : reply;
+      const apiUpdates = res.data?.updates || [];
       const tasksWithIds = allTasks.map((t, idx) => ({
         ...t,
         id: t.id || `${Date.now()}-${idx}`
@@ -198,10 +236,11 @@ const AIChatScreen = () => {
         isUser: false,
         timestamp: new Date(),
         suggestedTasks: tasksWithIds,
+        suggestedUpdates: apiUpdates,
       };
       setMessages((prev) => [...prev, aiMsg]);
     } catch {
-      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), text: "I'm having trouble connecting. Please try again.", isUser: false, timestamp: new Date(), suggestedTasks: [], displayText: "I'm having trouble connecting. Please try again." }]);
+      setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), text: "I'm having trouble connecting. Please try again.", isUser: false, timestamp: new Date(), suggestedTasks: [], suggestedUpdates: [], displayText: "I'm having trouble connecting. Please try again." }]);
       showToast("Network error", "error");
     } finally { setLoading(false); }
   };
@@ -274,36 +313,41 @@ const AIChatScreen = () => {
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
       <LinearGradient colors={[c.primary + "10", "transparent"]} style={{ position: "absolute", width: "100%", height: 120, top: 0 }} />
-      {messages.length === 1 && (
-        <View style={styles.welcomeSection}>
-          <GlassCard style={{ padding: 20 }}>
-            <Text style={[styles.welcomeTitle, { color: c.text }]}>What can I help you with?</Text>
-            <View style={styles.quickActions}>
-              {QUICK_ACTIONS.map((qa) => (
-                <TouchableOpacity key={qa.action} style={[styles.quickBtn, { backgroundColor: c.inputBg, borderColor: c.border }]} onPress={() => handleQuickAction(qa.action)}>
-                  <Text style={styles.quickIcon}>{qa.icon}</Text>
-                  <Text style={[styles.quickLabel, { color: c.text }]}>{qa.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </GlassCard>
-          <View style={styles.suggestions}>
-            <Text style={[styles.suggestionLabel, { color: c.textSecondary }]}>Try typing:</Text>
-            <View style={styles.chipsRow}>
-              {["I have an AI assignment due tomorrow", "Help me study for my exam", "I'm feeling overwhelmed with work"].map((s, i) => (
-                <SuggestionChip key={i} label={s} onPress={() => sendMessage(s)} />
-              ))}
-            </View>
-          </View>
-        </View>
-      )}
       <FlatList
         ref={flatListRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => <AnimatedMessage item={item} index={index} onPressAdd={handlePressAdd} addedTaskIds={addedTaskIds} />}
+        renderItem={({ item, index }) => <AnimatedMessage item={item} index={index} onPressAdd={handlePressAdd} addedTaskIds={addedTaskIds} onApplyUpdate={handleApplyUpdate} appliedUpdateIds={appliedUpdateIds} />}
+        ListHeaderComponent={
+          <View style={styles.welcomeSection}>
+            <GlassCard>
+              <Text style={[styles.welcomeTitle, { color: c.text }]}>TaskPilot is here to help</Text>
+              <View style={styles.quickActions}>
+                {QUICK_ACTIONS.map((qa) => (
+                  <TouchableOpacity key={qa.action} style={[styles.quickBtn, { backgroundColor: c.inputBg, borderColor: c.border }]} onPress={() => handleQuickAction(qa.action)}>
+                    <Text style={styles.quickIcon}>{qa.icon}</Text>
+                    <Text style={[styles.quickLabel, { color: c.text }]}>{qa.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </GlassCard>
+            <View style={styles.suggestions}>
+              <Text style={[styles.suggestionLabel, { color: c.textSecondary }]}>Try typing:</Text>
+              <View style={styles.chipsRow}>
+                {["Help me organize my tasks", "Give me productivity tips", "I'm feeling overwhelmed with work"].map((s, i) => (
+                  <SuggestionChip key={i} label={s} onPress={() => sendMessage(s)} />
+                ))}
+              </View>
+            </View>
+          </View>
+        }
         ListFooterComponent={loading ? renderTypingIndicator : null}
-        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onScroll={({ nativeEvent }) => {
+          const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+          isNearBottom.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - 80;
+        }}
+        scrollEventThrottle={100}
+        onContentSizeChange={() => { if (isNearBottom.current) flatListRef.current?.scrollToEnd({ animated: true }); }}
         contentContainerStyle={styles.messageList}
         showsVerticalScrollIndicator={false}
       />
@@ -311,7 +355,7 @@ const AIChatScreen = () => {
         <TouchableOpacity activeOpacity={1} onPress={() => inputRef.current?.focus()} style={{ flex: 1, flexDirection: "row", alignItems: "flex-end", gap: 8 }}>
           <Animated.View style={[styles.inputGlow, { backgroundColor: c.primary, opacity: inputFocusAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.2] }) }]} />
           <View style={[styles.input, { color: c.text, backgroundColor: c.inputBg, borderColor: inputFocusAnim.interpolate({ inputRange: [0, 1], outputRange: [c.border, c.primary + "50"] }) }]}>
-            <TextInput ref={inputRef} style={{ flex: 1, color: c.text, fontSize: 15, fontWeight: "500", padding: 0, margin: 0, outline: "none", outlineStyle: "none", maxHeight: 80 }} value={input} onChangeText={setInput} placeholder="Type a message..." placeholderTextColor={c.textTertiary} multiline maxLength={2000} onFocus={() => { setInputFocused(true); Animated.spring(inputFocusAnim, { toValue: 1, damping: 15, stiffness: 120, useNativeDriver: false }).start(); }} onBlur={() => { setInputFocused(false); Animated.spring(inputFocusAnim, { toValue: 0, damping: 15, stiffness: 120, useNativeDriver: false }).start(); }} />
+            <TextInput ref={inputRef} style={{ flex: 1, color: c.text, fontSize: 15, fontWeight: "500", padding: 0, margin: 0, maxHeight: 80 }} value={input} onChangeText={setInput} placeholder="Type a message..." placeholderTextColor={c.textTertiary} multiline maxLength={2000} onFocus={() => { setInputFocused(true); Animated.spring(inputFocusAnim, { toValue: 1, damping: 15, stiffness: 120, useNativeDriver: false }).start(); }} onBlur={() => { setInputFocused(false); Animated.spring(inputFocusAnim, { toValue: 0, damping: 15, stiffness: 120, useNativeDriver: false }).start(); }} />
           </View>
         </TouchableOpacity>
         <TouchableOpacity
@@ -485,6 +529,47 @@ const AIChatScreen = () => {
           </TouchableOpacity>
         </View>
       </BottomSheet>
+
+      <BottomSheet
+        visible={showUpdateConfirm}
+        onClose={() => setShowUpdateConfirm(false)}
+        title="Confirm Update"
+        snapPoint={Platform.OS === 'web' ? 320 : 280}
+      >
+        {pendingUpdate && (() => {
+          const current = tasks.find((t) => t._id === pendingUpdate.taskId);
+          const formatVal = (v) => {
+            if (!v) return "none";
+            if (v instanceof Date) return v.toLocaleDateString();
+            if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v)) return new Date(v).toLocaleDateString();
+            return String(v);
+          };
+          return (
+            <View style={styles.formGroup}>
+              <Text style={[styles.changeTaskTitle, { color: c.text }]} numberOfLines={1}>📌 {current?.title || "Task"}</Text>
+              <Text style={[styles.changeSummary, { color: c.textSecondary }]}>{pendingUpdate.summary}</Text>
+              <View style={styles.changesList}>
+                {Object.entries(pendingUpdate.changes).map(([field, value]) => (
+                  <View key={field} style={styles.changeRow}>
+                    <Text style={[styles.changeField, { color: c.textTertiary, textTransform: "capitalize" }]}>{field}</Text>
+                    <Text style={[styles.changeOld, { color: c.textSecondary }]}>{formatVal(current?.[field])}</Text>
+                    <Text style={[styles.changeArrow, { color: c.textTertiary }]}>→</Text>
+                    <Text style={[styles.changeNew, { color: c.warning }]}>{formatVal(value)}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={[styles.cancelBtn, { borderColor: c.border }]} onPress={() => setShowUpdateConfirm(false)} disabled={savingTask}>
+                  <Text style={[styles.cancelBtnText, { color: c.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: c.warning }]} onPress={handleConfirmUpdate} disabled={savingTask}>
+                  <Text style={styles.confirmBtnText}>{savingTask ? "Applying..." : "Confirm & Apply"}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })()}
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 };
@@ -505,7 +590,7 @@ const styles = StyleSheet.create({
   typingBubble: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 20, borderWidth: 1, alignSelf: "flex-start", gap: 5 },
   typingDot: { width: 8, height: 8, borderRadius: 4 },
   inputBar: { flexDirection: "row", alignItems: "flex-end", padding: 12, borderTopWidth: 1 },
-  inputGlow: { position: "absolute", top: 0, left: 4, right: 4, bottom: 0, borderRadius: 16, filter: "blur(10px)" },
+  inputGlow: { position: "absolute", top: 0, left: 4, right: 4, bottom: 0, borderRadius: 16 },
   input: { flex: 1, flexDirection: "row", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, alignItems: "center" },
   micBtn: { marginLeft: 8, width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", position: "relative" },
   micPulse: { position: "absolute", width: 44, height: 44, borderRadius: 22 },
@@ -521,6 +606,14 @@ const styles = StyleSheet.create({
   priorityIcon: { fontSize: 14 },
   priorityLabel: { fontSize: 13, fontWeight: "600" },
   dateBtn: { padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "center" },
+  changeTaskTitle: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
+  changeSummary: { fontSize: 13, lineHeight: 18, marginBottom: 14 },
+  changesList: { gap: 10, marginBottom: 8 },
+  changeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  changeField: { fontSize: 12, fontWeight: "600", minWidth: 60 },
+  changeOld: { fontSize: 12, textDecorationLine: "line-through", flex: 1 },
+  changeArrow: { fontSize: 12 },
+  changeNew: { fontSize: 13, fontWeight: "700", flex: 1 },
   actionButtons: { flexDirection: "row", gap: 10, marginTop: 16 },
   cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   cancelBtnText: { fontSize: 14, fontWeight: "600" },

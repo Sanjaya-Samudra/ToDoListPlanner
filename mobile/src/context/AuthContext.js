@@ -1,6 +1,10 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from "react";
+import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../services/api";
+
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000;
+const CHECK_INTERVAL = 30 * 1000;
 
 const AuthContext = createContext(null);
 
@@ -8,27 +12,53 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const lastActivity = useRef(Date.now());
+  const inactivityTimer = useRef(null);
+
+  const updateActivity = useCallback(() => {
+    lastActivity.current = Date.now();
+  }, []);
+
+  const logout = useCallback(async (reason) => {
+    if (reason) {
+      await AsyncStorage.setItem("@logout_reason", reason);
+    }
+    await Promise.all([
+      AsyncStorage.removeItem("@token"),
+      AsyncStorage.removeItem("@user"),
+    ]);
+    delete api.defaults.headers.common["Authorization"];
+    setToken(null);
+    setUser(null);
+  }, []);
 
   useEffect(() => {
-    loadStoredAuth();
+    if (!token) return;
 
-    // Automatically log out user if any API request returns a 401 Unauthorized error
-    const interceptor = api.interceptors.response.use(
-      (response) => response,
-      async (error) => {
-        if (error.response?.status === 401) {
-          await logout();
+    const handleAppState = (nextState) => {
+      if (nextState === "active") {
+        const elapsed = Date.now() - lastActivity.current;
+        if (elapsed > INACTIVITY_TIMEOUT) {
+          logout("You have been logged out due to inactivity");
         }
-        return Promise.reject(error);
       }
-    );
+    };
+    const subscription = AppState.addEventListener("change", handleAppState);
+
+    inactivityTimer.current = setInterval(() => {
+      const elapsed = Date.now() - lastActivity.current;
+      if (elapsed > INACTIVITY_TIMEOUT) {
+        logout("You have been logged out due to inactivity");
+      }
+    }, CHECK_INTERVAL);
 
     return () => {
-      api.interceptors.response.eject(interceptor);
+      subscription.remove();
+      if (inactivityTimer.current) clearInterval(inactivityTimer.current);
     };
-  }, [logout]);
+  }, [token, logout]);
 
-  const loadStoredAuth = async () => {
+  const loadStoredAuth = useCallback(async () => {
     try {
       const [storedToken, storedUser] = await Promise.all([
         AsyncStorage.getItem("@token"),
@@ -43,10 +73,30 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadStoredAuth();
+
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401) {
+          await logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
+  }, [loadStoredAuth, logout]);
 
   const login = useCallback(async (email, password) => {
     const { data } = await api.post("/auth/login", { email, password });
+    lastActivity.current = Date.now();
+    await AsyncStorage.removeItem("@logout_reason");
     await Promise.all([
       AsyncStorage.setItem("@token", data.token),
       AsyncStorage.setItem("@user", JSON.stringify(data.user)),
@@ -59,6 +109,8 @@ export const AuthProvider = ({ children }) => {
 
   const register = useCallback(async (name, email, password) => {
     const { data } = await api.post("/auth/register", { name, email, password });
+    lastActivity.current = Date.now();
+    await AsyncStorage.removeItem("@logout_reason");
     await Promise.all([
       AsyncStorage.setItem("@token", data.token),
       AsyncStorage.setItem("@user", JSON.stringify(data.user)),
@@ -67,29 +119,6 @@ export const AuthProvider = ({ children }) => {
     setToken(data.token);
     setUser(data.user);
     return data.user;
-  }, []);
-
-  const demoLogin = useCallback(async () => {
-    const demoUser = { _id: "demo", name: "Alex Turner", email: "demo@taskflow.app", avatar: null };
-    const demoToken = "demo-token-taskflow-2024";
-    await Promise.all([
-      AsyncStorage.setItem("@token", demoToken),
-      AsyncStorage.setItem("@user", JSON.stringify(demoUser)),
-    ]);
-    api.defaults.headers.common["Authorization"] = `Bearer ${demoToken}`;
-    setToken(demoToken);
-    setUser(demoUser);
-    return demoUser;
-  }, []);
-
-  const logout = useCallback(async () => {
-    await Promise.all([
-      AsyncStorage.removeItem("@token"),
-      AsyncStorage.removeItem("@user"),
-    ]);
-    delete api.defaults.headers.common["Authorization"];
-    setToken(null);
-    setUser(null);
   }, []);
 
   const updateProfile = useCallback(async (data) => {
@@ -101,7 +130,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, demoLogin, logout, updateProfile, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, updateActivity, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

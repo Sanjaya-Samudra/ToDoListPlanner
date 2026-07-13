@@ -32,6 +32,7 @@ const TaskListScreen = ({ navigation }) => {
   const [sort, setSort] = useState("createdAt");
   const [quickAdd, setQuickAdd] = useState("");
   const [showSort, setShowSort] = useState(false);
+  const [sortRendered, setSortRendered] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(0)).current;
   const sortAnim = useRef(new Animated.Value(0)).current;
@@ -43,16 +44,17 @@ const TaskListScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
+  useEffect(() => { fetchTasks(); }, []);
   useEffect(() => {
-    fetchTasks();
-    const unsubscribe = navigation.addListener("focus", () => {
-      fetchTasks();
-    });
-    return unsubscribe;
+    const unsub = navigation.addListener("focus", () => { fetchTasks(); });
+    return unsub;
   }, [navigation, fetchTasks]);
 
   useEffect(() => {
-    Animated.spring(sortAnim, { toValue: showSort ? 1 : 0, damping: 14, stiffness: 120, useNativeDriver: true }).start();
+    if (showSort) setSortRendered(true);
+    Animated.spring(sortAnim, { toValue: showSort ? 1 : 0, damping: 14, stiffness: 120, useNativeDriver: true }).start(() => {
+      if (!showSort) setSortRendered(false);
+    });
   }, [showSort]);
 
   const filtered = tasks
@@ -127,7 +129,7 @@ const TaskListScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {showSort && (
+      {sortRendered && (
         <Animated.View style={[styles.sortPanel, { backgroundColor: c.glass, borderColor: c.glassBorder, opacity: sortAnim, transform: [{ translateY: sortAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }] }]}>
           {SORTS.map((s) => (
             <TouchableOpacity key={s.key} style={[styles.sortOption, { backgroundColor: sort === s.key ? c.primary + "15" : "transparent" }]} onPress={() => { setSort(s.key); setShowSort(false); mediumImpact(); }}>

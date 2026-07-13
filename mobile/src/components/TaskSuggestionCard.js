@@ -2,9 +2,7 @@ import React, { useRef } from "react";
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../context/ThemeContext";
-import { useTasks } from "../hooks/useTasks";
-import { useToast } from "../context/ToastContext";
-import { mediumImpact, successNotification } from "../utils/haptics";
+import { mediumImpact } from "../utils/haptics";
 import { getPriorityColor } from "../constants/priorities";
 
 const TaskSuggestionCard = ({ title, description, category, priority, onPressAdd, isAdded }) => {

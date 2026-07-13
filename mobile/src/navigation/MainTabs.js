@@ -43,7 +43,6 @@ const ProfileNavigator = () => (
 
 const MainTabs = () => {
   const { theme } = useTheme();
-  const colors = theme.colors;
 
   return (
     <Tab.Navigator

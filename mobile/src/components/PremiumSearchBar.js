@@ -55,10 +55,10 @@ const PremiumSearchBar = ({ value, onChangeText, onSubmit, placeholder, icon = "
 
 const styles = StyleSheet.create({
   wrapper: { position: "relative" },
-  glow: { position: "absolute", top: 0, left: 4, right: 4, bottom: 0, borderRadius: 18, filter: "blur(12px)" },
-  bar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 2, borderRadius: 18, borderWidth: 1, backdropFilter: "blur(12px)" },
+  glow: { position: "absolute", top: 0, left: 4, right: 4, bottom: 0, borderRadius: 18 },
+  bar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 2, borderRadius: 18, borderWidth: 1 },
   icon: { fontSize: 16, marginRight: 10 },
-  input: { flex: 1, fontSize: 15, fontWeight: "500", paddingVertical: 10, height: 44, outlineStyle: "none", outline: "none" },
+  input: { flex: 1, fontSize: 15, fontWeight: "500", paddingVertical: 10, height: 44 },
   clearBtn: { padding: 6, marginLeft: 4 },
   clearIcon: { fontSize: 14, fontWeight: "600" },
 });

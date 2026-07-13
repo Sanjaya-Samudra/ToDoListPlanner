@@ -6,7 +6,6 @@ const StatCard = ({ icon, label, value, color, delay = 0, onPress }) => {
   const { theme } = useTheme();
   const colors = theme.colors;
   const scale = useRef(new Animated.Value(0)).current;
-  const hover = useRef(new Animated.Value(0)).current;
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {

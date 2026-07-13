@@ -81,13 +81,11 @@ const DashboardScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => { loadData(); }, []);
   useEffect(() => {
-    loadData();
-    const unsubscribe = navigation.addListener("focus", () => {
-      loadData();
-    });
-    return unsubscribe;
-  }, [navigation]);
+    const unsub = navigation.addListener("focus", () => { loadData(); });
+    return unsub;
+  }, [navigation, loadData]);
 
   useEffect(() => {
     Animated.parallel([

@@ -11,7 +11,7 @@ const ChatBubble = ({ message, isUser, timestamp }) => {
     <View style={[styles.container, isUser ? styles.userContainer : styles.aiContainer]}>
       {!isUser && (
         <View style={[styles.avatar, { backgroundColor: colors.primary + "20" }]}>
-          <Text style={[styles.avatarText, { color: colors.primary }]}>AI</Text>
+          <Text style={[styles.avatarText, { color: colors.primary }]}>🤖</Text>
         </View>
       )}
       <View style={styles.bubbleWrapper}>

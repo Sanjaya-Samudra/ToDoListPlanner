@@ -55,6 +55,10 @@ const TaskCard = ({ task, onPress, onComplete, onDelete, index = 0 }) => {
   const deleteHover = useRef(new Animated.Value(0)).current;
   const delIconHover = useRef(new Animated.Value(0)).current;
   const { hoverVal, hoverProps } = useHover();
+  const onDeleteRef = useRef(onDelete);
+  const taskRef = useRef(task);
+  onDeleteRef.current = onDelete;
+  taskRef.current = task;
   const overdue = isOverdue(task.dueDate) && task.status === "pending";
   const completed = task.status === "completed";
   const priorityColor = getPriorityColor(task.priority);
@@ -85,7 +89,7 @@ const TaskCard = ({ task, onPress, onComplete, onDelete, index = 0 }) => {
       ]).start();
       if (g.dx < SWIPE_THRESHOLD) {
         mediumImpact();
-        Animated.timing(translateX, { toValue: -width, duration: 200, useNativeDriver: true }).start(() => onDelete?.(task._id));
+        Animated.timing(translateX, { toValue: -width, duration: 200, useNativeDriver: true }).start(() => onDeleteRef.current?.(taskRef.current._id));
       } else {
         Animated.spring(translateX, { toValue: 0, damping: 18, stiffness: 180, useNativeDriver: true }).start();
       }
@@ -96,14 +100,12 @@ const TaskCard = ({ task, onPress, onComplete, onDelete, index = 0 }) => {
 
   return (
     <Animated.View style={{ opacity, transform: [{ scale }, { translateX }, { perspective: 800 }, { rotateX: tiltX }, { rotateY: tiltY }] }}>
-      <View style={styles.swipeActions}>
-        <View style={[styles.deleteAction, { backgroundColor: deleteHover.interpolate({ inputRange: [0, 1], outputRange: [colors.border + "60", colors.error + "E0"] }) }]}
-          onMouseEnter={Platform.OS === "web" ? () => Animated.spring(deleteHover, { toValue: 1, damping: 12, stiffness: 150, useNativeDriver: false }).start() : undefined}
-          onMouseLeave={Platform.OS === "web" ? () => Animated.spring(deleteHover, { toValue: 0, damping: 12, stiffness: 150, useNativeDriver: false }).start() : undefined}
-        >
-          <Text style={styles.actionText}>🗑</Text>
-          <Text style={styles.actionLabel}>Delete</Text>
-        </View>
+      <View style={[styles.swipeActions, { backgroundColor: deleteHover.interpolate({ inputRange: [0, 1], outputRange: [colors.border + "60", colors.error + "E0"] }) }]}
+        onMouseEnter={Platform.OS === "web" ? () => Animated.spring(deleteHover, { toValue: 1, damping: 12, stiffness: 150, useNativeDriver: false }).start() : undefined}
+        onMouseLeave={Platform.OS === "web" ? () => Animated.spring(deleteHover, { toValue: 0, damping: 12, stiffness: 150, useNativeDriver: false }).start() : undefined}
+      >
+        <Text style={styles.actionText}>🗑</Text>
+        <Text style={styles.actionLabel}>Delete</Text>
       </View>
       <Animated.View style={{ transform: [{ scale: pressScale }, { scale: hoverVal.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }}>
         <TouchableOpacity
@@ -114,9 +116,11 @@ const TaskCard = ({ task, onPress, onComplete, onDelete, index = 0 }) => {
           onPressOut={() => Animated.spring(pressScale, { toValue: 1, damping: 15, stiffness: 300, useNativeDriver: true }).start()}
           {...panResponder.panHandlers}
           {...hoverProps}
-          style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder, shadowColor: theme.shadow.md.shadowColor, overflow: showConfirm ? "visible" : "hidden" }]}
+          style={[styles.card, { backgroundColor: colors.glass, borderColor: colors.glassBorder, shadowColor: theme.shadow.md.shadowColor }]}
         >
-          <LinearGradient colors={[priorityColor, priorityColor + "80"]} style={styles.priorityBar} />
+          <View style={[styles.priorityBarInner, { backgroundColor: priorityColor + "15" }]}>
+            <View style={[styles.priorityBarFill, { backgroundColor: priorityColor }]} />
+          </View>
           <View style={styles.cardGlow} pointerEvents="none" />
           <TouchableOpacity
             style={[styles.checkbox, { borderColor: completed ? colors.success : colors.textTertiary + "30", backgroundColor: completed ? colors.success : "transparent" }]}
@@ -154,7 +158,7 @@ const TaskCard = ({ task, onPress, onComplete, onDelete, index = 0 }) => {
               )}
               {task.isAIGenerated && (
                 <View style={[styles.badge, { backgroundColor: colors.primary + "10" }]}>
-                  <Text style={[styles.badgeLabel, { color: colors.primary }]}>✨ AI</Text>
+                  <Text style={[styles.badgeLabel, { color: colors.primary }]}>✨ TaskPilot</Text>
                 </View>
               )}
             </View>
@@ -181,10 +185,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 3,
-    overflow: "hidden",
   },
   cardGlow: { position: "absolute", top: -40, right: -40, width: 80, height: 80, borderRadius: 40, backgroundColor: "rgba(255,255,255,0.03)" },
-  priorityBar: { position: "absolute", top: 0, bottom: 0, left: 0, width: 3, borderTopLeftRadius: 18, borderBottomLeftRadius: 18 },
+  priorityBarInner: { position: "absolute", top: 8, bottom: 8, left: 2, width: 4, borderRadius: 2 },
+  priorityBarFill: { flex: 1, borderRadius: 2, opacity: 0.8 },
   checkbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: "center", justifyContent: "center", marginRight: 12, marginTop: 1 },
   checkmark: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   content: { flex: 1 },
