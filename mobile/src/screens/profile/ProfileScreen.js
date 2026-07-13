@@ -226,8 +226,6 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             )}
 
-            <View style={{ height: 1, backgroundColor: c.borderLight, marginVertical: 4 }} />
-
             <TouchableOpacity onPress={() => { setShowPasswordSection(!showPasswordSection); setShowEmailSection(false); }} style={[styles.secHeader, { borderBottomColor: c.borderLight }]}>
               <Text style={{ fontSize: 18, marginRight: 12 }}>🔑</Text>
               <Text style={[styles.secLabel, { color: c.text }]}>Change Password</Text>
