@@ -14,6 +14,7 @@ const getTransporter = async () => {
 			auth: { user: env.email.user, pass: env.email.pass },
 			tls: { rejectUnauthorized: false },
 		});
+		console.log("\x1b[32m%s\x1b[0m", `[EMAIL] Using SMTP ${env.email.host}:${env.email.port} as ${env.email.user}`);
 	} else {
 		const testAccount = await nodemailer.createTestAccount();
 		transporter = nodemailer.createTransport({

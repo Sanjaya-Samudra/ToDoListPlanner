@@ -135,6 +135,7 @@ const forgotPassword = async (req, res) => {
 
 		if (!sent) {
 			console.log(`\x1b[33m[DEV] Fallback — reset code for ${user.email}: ${code}\x1b[0m`);
+			return res.status(500).json({ message: "Failed to send reset code. Check server email configuration." });
 		}
 
 		return res.json({ message: "If that email is registered, a reset code has been sent." });
