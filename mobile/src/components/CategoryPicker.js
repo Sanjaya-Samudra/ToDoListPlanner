@@ -29,7 +29,7 @@ const CategoryPicker = ({ selected, onSelect, showAll = true }) => {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, gap: 6, marginRight: 8 },
+  chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, gap: 6 },
   chipIcon: { fontSize: 14 },
   chipLabel: { fontSize: 13 },
 });

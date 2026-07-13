@@ -26,12 +26,14 @@ const EmptyState = ({ icon, title, subtitle, actionLabel, onAction, variant = "g
       Animated.spring(scale, { toValue: 1, damping: 10, stiffness: 100, useNativeDriver: true }),
       Animated.timing(translateY, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(angleAnim, { toValue: 1, duration: 4000, useNativeDriver: true }),
         Animated.timing(angleAnim, { toValue: 0, duration: 4000, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   const ill = illustrations[variant] || illustrations.generic;

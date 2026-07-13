@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, TouchableOpacity, Animated, Dimensions, StyleSheet } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 
@@ -10,21 +10,24 @@ const BottomSheet = ({ visible, onClose, children, title, snapPoint = height * 0
   const translateY = useRef(new Animated.Value(snapPoint)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
+  const [rendered, setRendered] = useState(false);
+
   useEffect(() => {
     if (visible) {
+      setRendered(true);
       Animated.parallel([
         Animated.spring(translateY, { toValue: 0, damping: 20, stiffness: 200, useNativeDriver: true }),
         Animated.timing(backdropOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]).start();
-    } else {
+    } else if (rendered) {
       Animated.parallel([
         Animated.timing(translateY, { toValue: snapPoint, duration: 250, useNativeDriver: true }),
         Animated.timing(backdropOpacity, { toValue: 0, duration: 250, useNativeDriver: true }),
-      ]).start();
+      ]).start(() => setRendered(false));
     }
   }, [visible]);
 
-  if (!visible) return null;
+  if (!rendered) return null;
 
   return (
     <View style={styles.wrapper}>
