@@ -110,11 +110,11 @@ const StatsScreen = () => {
   });
 
   const categories = [
-    { label: "Study", total: catCounts.study || 0, done: catDone.study || 0, color1: "#6C63FF", icon: "📚" },
-    { label: "Work", total: catCounts.work || 0, done: catDone.work || 0, color1: "#2ED573", icon: "💼" },
-    { label: "Personal", total: catCounts.personal || 0, done: catDone.personal || 0, color1: "#FF6584", icon: "🧘" },
-    { label: "Health", total: catCounts.health || 0, done: catDone.health || 0, color1: "#FFA502", icon: "💪" },
-    { label: "Other", total: catCounts.other || 0, done: catDone.other || 0, color1: "#636E72", icon: "📌" },
+    { label: "Study", total: catCounts.study || 0, done: catDone.study || 0, color1: c.primary, icon: "📚" },
+    { label: "Work", total: catCounts.work || 0, done: catDone.work || 0, color1: c.success, icon: "💼" },
+    { label: "Personal", total: catCounts.personal || 0, done: catDone.personal || 0, color1: c.secondary, icon: "🧘" },
+    { label: "Health", total: catCounts.health || 0, done: catDone.health || 0, color1: c.warning, icon: "💪" },
+    { label: "Other", total: catCounts.other || 0, done: catDone.other || 0, color1: c.textTertiary, icon: "📌" },
   ];
   const priorities = [
     { label: "High", total: priCounts.high || 0, done: priDone.high || 0, color1: "#FF4757", icon: "🔴" },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   streakLabel: { fontSize: 12, fontWeight: "500" },
   statsGrid: { flexDirection: "row", marginHorizontal: 16, gap: 8, marginBottom: 16 },
   statInner: { alignItems: "center", padding: 4, gap: 2, position: "relative" },
-  statBg: { position: "absolute", top: 0, left: 0, right: 0, height: 60, borderRadius: 12 },
+  statBg: { position: "absolute", top: 1, left: 8, right: 8, height: 28, borderRadius: 12 },
   statValue: { fontSize: 22, fontWeight: "800" },
   statLabel: { fontSize: 11, fontWeight: "500", marginTop: 2 },
   cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 14 },

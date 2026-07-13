@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Switch, Animated, StyleSheet, Alert, SafeAreaView, Platform } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Switch, Animated, StyleSheet, SafeAreaView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext";
@@ -45,9 +45,11 @@ const ProfileScreen = ({ navigation }) => {
   const [name, setName] = useState(user?.name || "");
   const [reminderFreq, setReminderFreq] = useState(user?.reminderFrequency || 5);
   const [saving, setSaving] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseRing = useRef(new Animated.Value(0)).current;
   const rotateRing = useRef(new Animated.Value(0)).current;
+  const modalAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadStats();
@@ -66,6 +68,10 @@ const ProfileScreen = ({ navigation }) => {
 
     return unsubscribe;
   }, [navigation]);
+
+  useEffect(() => {
+    Animated.spring(modalAnim, { toValue: showLogoutModal ? 1 : 0, damping: 15, stiffness: 180, useNativeDriver: true }).start();
+  }, [showLogoutModal]);
 
   const loadStats = async () => {
     try {
@@ -94,18 +100,13 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    if (Platform.OS === "web") {
-      const confirmLogout = window.confirm("Are you sure you want to logout?");
-      if (confirmLogout) {
-        mediumImpact();
-        logout();
-      }
-    } else {
-      Alert.alert("Logout", "Are you sure?", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Logout", style: "destructive", onPress: () => { mediumImpact(); logout(); } },
-      ]);
-    }
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    mediumImpact();
+    setShowLogoutModal(false);
+    logout();
   };
 
   const ringS = pulseRing.interpolate({ inputRange: [0, 1], outputRange: [1, 1.45] });
@@ -145,7 +146,7 @@ const ProfileScreen = ({ navigation }) => {
               <View style={[styles.statDivider, { backgroundColor: c.borderLight }]} />
               <AnimatedStat value={stats.percentage} label="Rate" color={c.warning} textColor={c.textSecondary} />
               <View style={[styles.statDivider, { backgroundColor: c.borderLight }]} />
-              <AnimatedStat value={stats.streak} label="Streak" color="#FF6584" textColor={c.textSecondary} />
+              <AnimatedStat value={stats.streak} label="Streak" color={c.secondary} textColor={c.textSecondary} />
             </View>
           </View>
 
@@ -194,6 +195,27 @@ const ProfileScreen = ({ navigation }) => {
           </View>
         </Animated.View>
       </ScrollView>
+
+      {showLogoutModal && (
+        <View style={[styles.modalOverlay, { backgroundColor: c.overlay }]}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowLogoutModal(false)} />
+          <Animated.View style={[styles.modalCard, { backgroundColor: c.surface, borderColor: c.border, transform: [{ scale: modalAnim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }], opacity: modalAnim }]}>
+            <View style={[styles.modalIconWrap, { backgroundColor: c.error + "15" }]}>
+              <Text style={styles.modalIcon}>🚪</Text>
+            </View>
+            <Text style={[styles.modalTitle, { color: c.text }]}>Leave TaskFlow?</Text>
+            <Text style={[styles.modalDesc, { color: c.textSecondary }]}>Your tasks and preferences are saved. You can sign back in anytime.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: c.inputBg, borderColor: c.border }]} onPress={() => setShowLogoutModal(false)}>
+                <Text style={[styles.modalBtnText, { color: c.text }]}>Stay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: c.error, borderColor: c.error }]} onPress={confirmLogout}>
+                <Text style={[styles.modalBtnText, { color: "#fff" }]}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -221,6 +243,15 @@ const styles = StyleSheet.create({
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
   menuLabel: { flex: 1, fontSize: 15, fontWeight: "500" },
   menuValue: { fontSize: 13, fontWeight: "500" },
+  modalOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", zIndex: 1000 },
+  modalCard: { width: "82%", borderRadius: 24, borderWidth: 1, padding: 28, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 24, elevation: 12 },
+  modalIconWrap: { width: 64, height: 64, borderRadius: 32, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  modalIcon: { fontSize: 28 },
+  modalTitle: { fontSize: 20, fontWeight: "800", marginBottom: 8 },
+  modalDesc: { fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 24 },
+  modalActions: { flexDirection: "row", gap: 12, width: "100%" },
+  modalBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: "center", borderWidth: 1 },
+  modalBtnText: { fontSize: 15, fontWeight: "700" },
 });
 
 export default ProfileScreen;

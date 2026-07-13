@@ -82,6 +82,10 @@ const DashboardScreen = ({ navigation }) => {
   const headerSlide = useRef(new Animated.Value(0)).current;
 
   useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const unsub = navigation.addListener("focus", () => { loadData(); });
+    return unsub;
+  }, [navigation, loadData]);
 
   useEffect(() => {
     Animated.parallel([

@@ -6,6 +6,7 @@ import { useTasks } from "../../hooks/useTasks";
 import GlassCard from "../../components/GlassCard";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import ConfettiOverlay from "../../components/ConfettiOverlay";
+import LoadingSplash from "../../components/LoadingSplash";
 import { useToast } from "../../context/ToastContext";
 import { mediumImpact, successNotification } from "../../utils/haptics";
 import { getPriorityColor, getCategoryColor } from "../../constants/priorities";
@@ -84,7 +85,7 @@ const TaskDetailScreen = ({ route, navigation }) => {
     ]);
   };
 
-  if (!task) return <View style={[styles.container, { backgroundColor: c.background }]} />;
+  if (!task) return <SafeAreaView style={[styles.container, { backgroundColor: c.background }]}><LoadingSplash variant="generic" /></SafeAreaView>;
 
   const priorityColor = getPriorityColor(task.priority);
   const categoryColor = getCategoryColor(task.category);
@@ -146,8 +147,8 @@ const TaskDetailScreen = ({ route, navigation }) => {
 
           {task.isAIGenerated && (
             <GlassCard accentColor={c.secondary} style={{ marginHorizontal: 16, marginBottom: 12 }}>
-              <Text style={[styles.sectionTitle, { color: c.text }]}>🤖 AI Generated</Text>
-              <Text style={[styles.aiNote, { color: c.textTertiary }]}>This task was suggested by AI. {task.aiContext || ""}</Text>
+              <Text style={[styles.sectionTitle, { color: c.text }]}>🤖 TaskPilot</Text>
+              <Text style={[styles.aiNote, { color: c.textTertiary }]}>Suggested by TaskPilot. {task.aiContext || ""}</Text>
             </GlassCard>
           )}
 
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 26, fontWeight: "800", lineHeight: 32 },
   heroDesc: { fontSize: 14, fontWeight: "500", lineHeight: 20, marginTop: 2 },
   infoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  infoItem: { width: "47%", gap: 2 },
+  infoItem: { width: "46%", gap: 2 },
   infoIcon: { fontSize: 18 },
   infoLabel: { fontSize: 11, fontWeight: "500", marginTop: 2 },
   infoValue: { fontSize: 14, fontWeight: "700" },
