@@ -93,22 +93,55 @@ const chat = async (req, res) => {
 			return res.status(400).json({ message: "Message is required" });
 		}
 
-		const snapshot = await getTaskSnapshot(req.user._id);
+		const userTasks = await Task.find({ userId: req.user._id })
+			.sort({ createdAt: -1 })
+			.lean();
+
 		const fallback = {
 			reply: "I can help you organize that. Try asking me to generate tasks, prioritize work, or plan your day.",
 			tasks: simpleTaskSuggestions(message),
+			updates: [],
 		};
+
+		const tasksForPrompt = userTasks.map((t) => ({
+			_id: t._id.toString(),
+			title: t.title,
+			description: t.description,
+			category: t.category,
+			priority: t.priority,
+			status: t.status,
+			dueDate: t.dueDate ? t.dueDate.toISOString().split("T")[0] : null,
+		}));
+
+		const systemPrompt = `You are a helpful task planning assistant. Return ONLY valid JSON with the following keys:
+
+1. "reply" (string) - Your conversational response to the user
+2. "tasks" (array) - New task suggestions. Each task must include title, description, category, and priority. Empty array if no new tasks needed.
+3. "updates" (array) - Suggested changes to existing tasks. Each update object must include:
+   - "taskId" (string) - The _id of the task to update (must match one from the user's task list below)
+   - "changes" (object) - Fields to update. Can include: title, description, category, priority, status (pending/in_progress/completed), dueDate (ISO date string or null)
+   - "summary" (string) - Brief human-readable description of what is changing
+
+The user's current tasks are listed below. You may suggest updates to any of them when the user asks.
+
+STRICT RULES FOR UPDATES:
+- Only include an update if the user has CLEARLY identified the specific task AND specified exact field changes
+- If the user is vague (e.g., "change this task", "update the priority", "fix that one") leave updates as an empty array and ask for clarification in the reply
+- "Clear identification" means the task can be matched by title or description from the list above
+- "Exact field changes" means the user stated what field and what new value
+- NEVER guess or assume which task the user means
+- NEVER make up field values
+- When in doubt, return an empty updates array and ask the user for more details in the reply
+
+User's tasks:
+${JSON.stringify(tasksForPrompt, null, 2)}`;
 
 		const result = await groqChat(
 			[
-				{
-					role: "system",
-					content:
-						"You are a helpful task planning assistant. Return ONLY valid JSON with keys reply (string) and tasks (array). Each task must include title, description, category, and priority. If no tasks are needed, return an empty array.",
-				},
+				{ role: "system", content: systemPrompt },
 				{
 					role: "user",
-					content: `User message: ${message}\n\nCurrent task snapshot: total=${snapshot.total}, completed=${snapshot.completed}, pending=${snapshot.pending}`,
+					content: `User message: ${message}`,
 				},
 			],
 			fallback
@@ -117,6 +150,7 @@ const chat = async (req, res) => {
 		return res.json({
 			reply: result.reply || fallback.reply,
 			tasks: Array.isArray(result.tasks) ? result.tasks : fallback.tasks,
+			updates: Array.isArray(result.updates) ? result.updates : [],
 		});
 	} catch (error) {
 		return res.status(500).json({ message: error.message || "Failed to process AI chat" });

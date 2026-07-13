@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const mongoose = require("mongoose");
 const env = require("./src/config/env");
 const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
@@ -37,6 +38,16 @@ app.use((req, res, next) => {
 });
 
 app.use(errorHandler);
+
+app.get("/api/health", (req, res) => {
+	const dbState = mongoose.connection.readyState;
+	const states = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
+	res.json({
+		status: "ok",
+		db: states[dbState] || "unknown",
+		timestamp: new Date().toISOString(),
+	});
+});
 
 const startServer = async () => {
 	try {
