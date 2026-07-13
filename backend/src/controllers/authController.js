@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
 const env = require("../config/env");
+const { sendResetCode } = require("../services/emailService");
 
 const createToken = (userId) => {
 	return jwt.sign({ id: userId }, env.jwtSecret, {
@@ -130,7 +131,11 @@ const forgotPassword = async (req, res) => {
 		user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
 		await user.save();
 
-		console.log(`\x1b[33m[DEV] Password reset code for ${user.email}: ${code}\x1b[0m`);
+		const sent = await sendResetCode(user.email, code);
+
+		if (!sent) {
+			console.log(`\x1b[33m[DEV] Fallback — reset code for ${user.email}: ${code}\x1b[0m`);
+		}
 
 		return res.json({ message: "If that email is registered, a reset code has been sent." });
 	} catch (error) {

@@ -22,5 +22,12 @@ module.exports = {
 	jwtExpiresIn: process.env.JWT_EXPIRES_IN,
 	groqApiKey: process.env.GROQ_API_KEY,
 	groqModel: process.env.GROQ_MODEL,
+	email: {
+		host: process.env.EMAIL_HOST,
+		port: parseInt(process.env.EMAIL_PORT || "587", 10),
+		user: process.env.EMAIL_USER,
+		pass: process.env.EMAIL_PASS,
+		from: process.env.EMAIL_FROM || "noreply@taskflow.app",
+	},
 };
 
