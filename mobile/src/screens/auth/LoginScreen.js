@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, Animated, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../context/AuthContext";
@@ -11,7 +12,7 @@ const LoginScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const colors = theme.colors;
-  const { login, demoLogin } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,6 +33,13 @@ const LoginScreen = ({ navigation }) => {
       Animated.spring(cardScale, { toValue: 1, damping: 18, stiffness: 100, useNativeDriver: true }),
     ]).start();
     Animated.stagger(140, [f0, f1, f2].map((a) => Animated.timing(a, { toValue: 1, duration: 500, useNativeDriver: true }))).start();
+
+    AsyncStorage.getItem("@logout_reason").then((reason) => {
+      if (reason) {
+        AsyncStorage.removeItem("@logout_reason");
+        setTimeout(() => showToast(reason, "info"), 600);
+      }
+    });
   }, []);
 
   const validate = () => {
@@ -52,18 +60,6 @@ const LoginScreen = ({ navigation }) => {
       showToast("Welcome to TaskFlow!", "success");
     } catch (err) {
       showToast(err.response?.data?.message || "Login failed", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGuest = async () => {
-    setLoading(true);
-    try {
-      await demoLogin();
-      showToast("Welcome to TaskFlow!", "success");
-    } catch {
-      showToast("Login failed", "error");
     } finally {
       setLoading(false);
     }
@@ -113,10 +109,6 @@ const LoginScreen = ({ navigation }) => {
               <TouchableOpacity onPress={() => navigation.navigate("Register")} style={styles.secondaryBtn}>
                 <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Create Account</Text>
               </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleGuest} style={styles.demoLink}>
-            <Text style={[styles.demoLinkText, { color: colors.textTertiary }]}>Continue as Guest</Text>
-          </TouchableOpacity>
             </Animated.View>
           </Animated.View>
         </ScrollView>
@@ -145,8 +137,6 @@ const styles = StyleSheet.create({
   dividerText: { marginHorizontal: 12, fontSize: 13, fontWeight: "500" },
   secondaryBtn: { alignItems: "center", paddingVertical: 10 },
   secondaryBtnText: { fontSize: 15, fontWeight: "600" },
-  demoLink: { alignItems: "center", paddingVertical: 8, marginTop: 4 },
-  demoLinkText: { fontSize: 13, fontWeight: "500" },
 });
 
 export default LoginScreen;
