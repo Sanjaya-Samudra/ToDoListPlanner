@@ -12,7 +12,7 @@ const TABS = [
   { key: "DashboardTab", label: "Home", icon: "🏠", activeIcon: "🏡" },
   { key: "TasksTab", label: "Tasks", icon: "📋", activeIcon: "📋" },
   { key: "StatsTab", label: "Stats", icon: "📊", activeIcon: "📊" },
-  { key: "AIChat", label: "AI Chat", icon: "🤖", activeIcon: "🤖" },
+  { key: "AIChat", label: "TaskPilot", icon: "🤖", activeIcon: "🤖" },
   { key: "Profile", label: "Profile", icon: "👤", activeIcon: "👤" },
 ];
 
@@ -33,6 +33,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.tabBar, borderTopColor: colors.borderLight, paddingBottom: insets.bottom }]}>
+      <Animated.View style={[styles.indicatorGlow, { backgroundColor: colors.primary, transform: [{ translateX: indicatorPos }] }]} />
       <Animated.View style={[styles.indicator, { backgroundColor: colors.primary, transform: [{ translateX: indicatorPos }] }]} />
       <View style={styles.tabRow}>
         {state.routes.map((route, index) => {
@@ -78,6 +79,15 @@ const styles = StyleSheet.create({
     width: INDICATOR_WIDTH,
     height: 3,
     borderRadius: 2,
+  },
+  indicatorGlow: {
+    position: "absolute",
+    top: -2,
+    width: INDICATOR_WIDTH + 12,
+    height: 7,
+    borderRadius: 4,
+    opacity: 0.25,
+    marginLeft: -6,
   },
   tabRow: { flexDirection: "row" },
   tab: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 6 },

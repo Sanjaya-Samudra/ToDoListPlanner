@@ -21,6 +21,7 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushToken, setPushToken] = useState(null);
+  const [loading, setLoading] = useState(false);
   const intervalRef = useRef(null);
 
   const registerPush = useCallback(async () => {
@@ -37,11 +38,13 @@ export const useNotifications = () => {
   }, []);
 
   const loadNotifications = useCallback(async () => {
+    setLoading(true);
     try {
       const { data } = await api.get("/notifications");
       setNotifications(data);
       setUnreadCount(data.filter((n) => !n.acknowledged).length);
     } catch {}
+    setLoading(false);
   }, []);
 
   const acknowledge = useCallback(async (id) => {
@@ -68,5 +71,5 @@ export const useNotifications = () => {
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [registerPush, loadNotifications]);
 
-  return { notifications, unreadCount, acknowledge, acknowledgeAll, refresh: loadNotifications, pushToken };
+  return { notifications, unreadCount, acknowledge, acknowledgeAll, refresh: loadNotifications, pushToken, loading };
 };

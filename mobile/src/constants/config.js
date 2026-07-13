@@ -1,5 +1,5 @@
 // For physical Android device testing over Wi-Fi: use your local machine's IP (detected: 192.168.8.197)
-const DEV_API_URL = "http://192.168.8.197:5000/api";
+const DEV_API_URL = "http://192.168.1.102:5000/api";
 
 // For Android Emulator testing: use loopback address
 // const DEV_API_URL = "http://10.0.2.2:5000/api";
