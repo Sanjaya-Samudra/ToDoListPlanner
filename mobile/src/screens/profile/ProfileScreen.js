@@ -36,7 +36,7 @@ const AnimatedStat = ({ value, label, color, textColor }) => {
 const ProfileScreen = ({ navigation }) => {
   const { theme, isDark, toggleTheme } = useTheme();
   const c = theme.colors;
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, changePassword, changeEmail } = useAuth();
   const { showToast } = useToast();
 
   const { getProgress } = useTasks();
@@ -46,6 +46,15 @@ const ProfileScreen = ({ navigation }) => {
   const [reminderFreq, setReminderFreq] = useState(user?.reminderFrequency || 5);
   const [saving, setSaving] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showEmailSection, setShowEmailSection] = useState(false);
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [emailPassword, setEmailPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [currPassword, setCurrPassword] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmNewPass, setConfirmNewPass] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPass, setSavingPass] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pulseRing = useRef(new Animated.Value(0)).current;
   const rotateRing = useRef(new Animated.Value(0)).current;
@@ -188,6 +197,68 @@ const ProfileScreen = ({ navigation }) => {
             })}
           </PremiumGlassCard>
 
+          <PremiumGlassCard accentColor={c.warning} glowColor={c.warning} style={{ marginHorizontal: 16, marginBottom: 16 }}>
+            <Text style={[styles.cardTitle, { color: c.text }]}>🔒 Security</Text>
+
+            <TouchableOpacity onPress={() => { setShowEmailSection(!showEmailSection); setShowPasswordSection(false); }} style={[styles.secHeader, { borderBottomColor: c.borderLight }]}>
+              <Text style={{ fontSize: 18, marginRight: 12 }}>✉️</Text>
+              <Text style={[styles.secLabel, { color: c.text }]}>Change Email</Text>
+              <Text style={[styles.secArrow, { color: c.textTertiary }]}>{showEmailSection ? "▾" : "▸"}</Text>
+            </TouchableOpacity>
+
+            {showEmailSection && (
+              <View style={styles.secBody}>
+                <AnimatedInput label="Current Password" value={emailPassword} onChangeText={setEmailPassword} secureTextEntry icon="🔒" />
+                <AnimatedInput label="New Email" value={newEmail} onChangeText={setNewEmail} keyboardType="email-address" autoCapitalize="none" icon="✉️" />
+                <AnimatedButton title={savingEmail ? "Saving..." : "Update Email"} onPress={async () => {
+                  if (!emailPassword || !newEmail) { showToast("Fill all fields", "error"); return; }
+                  setSavingEmail(true);
+                  try {
+                    await changeEmail(emailPassword, newEmail);
+                    showToast("Email changed successfully!", "success");
+                    setShowEmailSection(false);
+                    setEmailPassword("");
+                    setNewEmail("");
+                  } catch (err) {
+                    showToast(err.response?.data?.message || "Failed to change email", "error");
+                  } finally { setSavingEmail(false); }
+                }} loading={savingEmail} fullWidth />
+              </View>
+            )}
+
+            <View style={{ height: 1, backgroundColor: c.borderLight, marginVertical: 4 }} />
+
+            <TouchableOpacity onPress={() => { setShowPasswordSection(!showPasswordSection); setShowEmailSection(false); }} style={[styles.secHeader, { borderBottomColor: c.borderLight }]}>
+              <Text style={{ fontSize: 18, marginRight: 12 }}>🔑</Text>
+              <Text style={[styles.secLabel, { color: c.text }]}>Change Password</Text>
+              <Text style={[styles.secArrow, { color: c.textTertiary }]}>{showPasswordSection ? "▾" : "▸"}</Text>
+            </TouchableOpacity>
+
+            {showPasswordSection && (
+              <View style={styles.secBody}>
+                <AnimatedInput label="Current Password" value={currPassword} onChangeText={setCurrPassword} secureTextEntry icon="🔒" />
+                <AnimatedInput label="New Password" value={newPass} onChangeText={setNewPass} secureTextEntry icon="🔒" />
+                <AnimatedInput label="Confirm New Password" value={confirmNewPass} onChangeText={setConfirmNewPass} secureTextEntry icon="🔒" />
+                <AnimatedButton title={savingPass ? "Saving..." : "Update Password"} onPress={async () => {
+                  if (!currPassword || !newPass || !confirmNewPass) { showToast("Fill all fields", "error"); return; }
+                  if (newPass !== confirmNewPass) { showToast("Passwords don't match", "error"); return; }
+                  if (newPass.length < 6) { showToast("Too short", "error"); return; }
+                  setSavingPass(true);
+                  try {
+                    await changePassword(currPassword, newPass);
+                    showToast("Password changed successfully!", "success");
+                    setShowPasswordSection(false);
+                    setCurrPassword("");
+                    setNewPass("");
+                    setConfirmNewPass("");
+                  } catch (err) {
+                    showToast(err.response?.data?.message || "Failed to change password", "error");
+                  } finally { setSavingPass(false); }
+                }} loading={savingPass} fullWidth />
+              </View>
+            )}
+          </PremiumGlassCard>
+
           <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
             <AnimatedButton title="Logout" onPress={handleLogout} variant="danger" fullWidth size="lg" />
           </View>
@@ -250,6 +321,10 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: "row", gap: 12, width: "100%" },
   modalBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: "center", borderWidth: 1 },
   modalBtnText: { fontSize: 15, fontWeight: "700" },
+  secHeader: { flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
+  secLabel: { flex: 1, fontSize: 15, fontWeight: "500" },
+  secArrow: { fontSize: 16, fontWeight: "700" },
+  secBody: { paddingTop: 12 },
 });
 
 export default ProfileScreen;

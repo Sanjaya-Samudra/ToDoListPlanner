@@ -148,7 +148,7 @@ const chat = async (req, res) => {
 		const systemPrompt = `You are a helpful task planning assistant. Return ONLY valid JSON with the following keys:
 
 1. "reply" (string) - Your conversational response to the user
-2. "tasks" (array) - New task suggestions. Each task must include title, description, category, and priority. Empty array if no new tasks needed.
+2. "tasks" (array) - New task suggestions. Each task must include title (string), description (string), category (one of: study, work, personal, health, other), priority (one of: high, medium, low), and dueDate (ISO 8601 string or null). Analyze the user's message to suggest the most appropriate priority level and date/time. If the user does not specify a date or time, suggest a realistic one based on context. Empty array if no new tasks needed.
 3. "updates" (array) - Suggested changes to existing tasks. Each update object must include:
    - "taskId" (string) - The _id of the task to update (must match one from the user's task list below)
    - "changes" (object) - Fields to update. Can include: title, description, category, priority, status (pending/in_progress/completed), dueDate (ISO date string or null)

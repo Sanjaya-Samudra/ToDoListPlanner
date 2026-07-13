@@ -129,8 +129,20 @@ export const AuthProvider = ({ children }) => {
     return updated;
   }, []);
 
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    await api.put("/auth/change-password", { currentPassword, newPassword });
+  }, []);
+
+  const changeEmail = useCallback(async (password, newEmail) => {
+    const { data: res } = await api.put("/auth/change-email", { password, newEmail });
+    const updated = res.user;
+    await AsyncStorage.setItem("@user", JSON.stringify(updated));
+    setUser(updated);
+    return updated;
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, updateActivity, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateProfile, updateActivity, changePassword, changeEmail, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

@@ -100,6 +100,10 @@ const LoginScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </AnimatedField>
 
+              <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")} style={styles.forgotLink}>
+                <Text style={[styles.forgotText, { color: colors.textTertiary }]}>Forgot Password?</Text>
+              </TouchableOpacity>
+
               <View style={styles.divider}>
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                 <Text style={[styles.dividerText, { color: colors.textTertiary }]}>or</Text>
@@ -132,6 +136,8 @@ const styles = StyleSheet.create({
   card: { borderRadius: 18, padding: 20, borderWidth: 1, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 },
   loginBtn: { height: 50, borderRadius: 12, justifyContent: "center", alignItems: "center", shadowColor: "#6C63FF", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   loginBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  forgotLink: { alignItems: "center", paddingVertical: 6, marginTop: 2 },
+  forgotText: { fontSize: 13, fontWeight: "500" },
   divider: { flexDirection: "row", alignItems: "center", marginVertical: 16 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { marginHorizontal: 12, fontSize: 13, fontWeight: "500" },
